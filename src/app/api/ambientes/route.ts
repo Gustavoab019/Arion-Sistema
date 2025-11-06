@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/src/lib/db";
 import Ambiente from "@/src/lib/models/Ambiente";
+import { getCurrentUser } from "@/src/lib/getCurrentUser";
 
 // tipos auxiliares só pra essa rota
 type MedidasInput = {
@@ -67,6 +68,14 @@ function montarCalculado(data: AmbienteInput) {
 }
 
 export async function GET(req: Request) {
+  const user = await getCurrentUser(req);
+  if (!user) {
+    return NextResponse.json(
+      { message: "Não autenticado." },
+      { status: 401 }
+    );
+  }
+
   await connectDB();
 
   const { searchParams } = new URL(req.url);
@@ -83,6 +92,14 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const user = await getCurrentUser(req);
+  if (!user) {
+    return NextResponse.json(
+      { message: "Não autenticado." },
+      { status: 401 }
+    );
+  }
+
   await connectDB();
   const data = (await req.json()) as AmbienteInput;
 
@@ -115,6 +132,10 @@ export async function POST(req: Request) {
     sequencia,
     codigo,
     calculado,
+    medidoPor: user.nome,
+    medidoPorId: user._id,
+    createdBy: user._id,
+    updatedBy: user._id,
   });
 
   return NextResponse.json(novo, { status: 201 });

@@ -7,6 +7,38 @@ import { MedicoesSidebar } from "./components/MedicoesSidebar";
 import { Ambiente, Obra } from "./types";
 
 const ACTIVE_OBRA_KEY = "sistema-cortinados:obra-ativa";
+const FORM_DEFAULTS = {
+  prefixo: "QT",
+  sequencia: 1,
+  largura: "",
+  altura: "",
+  recuo: "",
+  instalacao: "teto",
+  observacoes: "",
+  calha: "Forest preta",
+  calhaDesconto: "-1.5",
+  tecidoPrincipal: "Voile branco",
+  tecidoPrincipalDesc: "0",
+  tecidoSecundario: "Blackout cinza",
+  tecidoSecundarioDesc: "-2",
+};
+
+async function parseJsonOrThrow<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    let message = "Erro ao processar a solicitação.";
+    try {
+      const error = await res.json();
+      message = error?.message || error?.error || message;
+    } catch {
+      const text = await res.text();
+      if (text) {
+        message = text;
+      }
+    }
+    throw new Error(message);
+  }
+  return res.json() as Promise<T>;
+}
 
 export default function MedicoesPage() {
   const [obras, setObras] = useState<Obra[]>([]);
@@ -15,20 +47,28 @@ export default function MedicoesPage() {
   const [quarto, setQuarto] = useState("101");
 
   // form states
-  const [prefixo, setPrefixo] = useState("QT");
-  const [sequencia, setSequencia] = useState(1);
-  const [largura, setLargura] = useState("");
-  const [altura, setAltura] = useState("");
-  const [recuo, setRecuo] = useState("");
-  const [instalacao, setInstalacao] = useState("teto");
-  const [observacoes, setObservacoes] = useState("");
+  const [prefixo, setPrefixo] = useState(FORM_DEFAULTS.prefixo);
+  const [sequencia, setSequencia] = useState(FORM_DEFAULTS.sequencia);
+  const [largura, setLargura] = useState(FORM_DEFAULTS.largura);
+  const [altura, setAltura] = useState(FORM_DEFAULTS.altura);
+  const [recuo, setRecuo] = useState(FORM_DEFAULTS.recuo);
+  const [instalacao, setInstalacao] = useState(FORM_DEFAULTS.instalacao);
+  const [observacoes, setObservacoes] = useState(FORM_DEFAULTS.observacoes);
 
-  const [calha, setCalha] = useState("Forest preta");
-  const [calhaDesconto, setCalhaDesconto] = useState("-1.5");
-  const [tecidoPrincipal, setTecidoPrincipal] = useState("Voile branco");
-  const [tecidoPrincipalDesc, setTecidoPrincipalDesc] = useState("0");
-  const [tecidoSecundario, setTecidoSecundario] = useState("Blackout cinza");
-  const [tecidoSecundarioDesc, setTecidoSecundarioDesc] = useState("-2");
+  const [calha, setCalha] = useState(FORM_DEFAULTS.calha);
+  const [calhaDesconto, setCalhaDesconto] = useState(FORM_DEFAULTS.calhaDesconto);
+  const [tecidoPrincipal, setTecidoPrincipal] = useState(
+    FORM_DEFAULTS.tecidoPrincipal
+  );
+  const [tecidoPrincipalDesc, setTecidoPrincipalDesc] = useState(
+    FORM_DEFAULTS.tecidoPrincipalDesc
+  );
+  const [tecidoSecundario, setTecidoSecundario] = useState(
+    FORM_DEFAULTS.tecidoSecundario
+  );
+  const [tecidoSecundarioDesc, setTecidoSecundarioDesc] = useState(
+    FORM_DEFAULTS.tecidoSecundarioDesc
+  );
 
   // list
   const [ambientes, setAmbientes] = useState<Ambiente[]>([]);
@@ -45,8 +85,8 @@ export default function MedicoesPage() {
   useEffect(() => {
     const fetchObras = async () => {
       try {
-        const res = await fetch("/api/obras");
-        const data: Obra[] = await res.json();
+        const res = await fetch("/api/obras", { credentials: "include" });
+        const data = await parseJsonOrThrow<Obra[]>(res);
         setObras(data);
 
         if (typeof window !== "undefined") {
@@ -76,69 +116,89 @@ export default function MedicoesPage() {
 
   // carregar ambientes
   useEffect(() => {
+    if (!obraId) return;
+    const controller = new AbortController();
+
     const fetchData = async () => {
-      if (!obraId) return;
       setLoading(true);
       try {
-        const res = await fetch(`/api/ambientes?obraId=${obraId}&quarto=${quarto}`);
-        const data: Ambiente[] = await res.json();
+        const res = await fetch(
+          `/api/ambientes?obraId=${obraId}&quarto=${quarto}`,
+          { signal: controller.signal, credentials: "include" }
+        );
+        const data = await parseJsonOrThrow<Ambiente[]>(res);
         setAmbientes(data);
       } catch (err) {
+        if ((err as Error).name === "AbortError") return;
         console.error("Erro ao carregar ambientes:", err);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
+
     fetchData();
+    return () => controller.abort();
   }, [quarto, obraId]);
 
   function fillFormFromAmbiente(amb: Ambiente) {
     setSelectedId(amb._id);
     setPrefixo(amb.prefixo);
     setQuarto(amb.quarto);
-    setSequencia(amb.sequencia);
-    setLargura(amb.medidas?.largura !== undefined ? String(amb.medidas.largura) : "");
-    setAltura(amb.medidas?.altura !== undefined ? String(amb.medidas.altura) : "");
-    setRecuo(amb.medidas?.recuo !== undefined ? String(amb.medidas.recuo) : "");
-    setInstalacao(amb.medidas?.instalacao || "teto");
-    setObservacoes(amb.observacoes || "");
+    setSequencia(amb.sequencia ?? FORM_DEFAULTS.sequencia);
+    setLargura(
+      amb.medidas?.largura !== undefined ? String(amb.medidas.largura) : FORM_DEFAULTS.largura
+    );
+    setAltura(
+      amb.medidas?.altura !== undefined ? String(amb.medidas.altura) : FORM_DEFAULTS.altura
+    );
+    setRecuo(
+      amb.medidas?.recuo !== undefined ? String(amb.medidas.recuo) : FORM_DEFAULTS.recuo
+    );
+    setInstalacao(amb.medidas?.instalacao || FORM_DEFAULTS.instalacao);
+    setObservacoes(amb.observacoes || FORM_DEFAULTS.observacoes);
 
-    setCalha(amb.variaveis?.calha || "");
-    setTecidoPrincipal(amb.variaveis?.tecidoPrincipal || "");
-    setTecidoSecundario(amb.variaveis?.tecidoSecundario || "");
+    setCalha(amb.variaveis?.calha || FORM_DEFAULTS.calha);
+    setTecidoPrincipal(
+      amb.variaveis?.tecidoPrincipal || FORM_DEFAULTS.tecidoPrincipal
+    );
+    setTecidoSecundario(
+      amb.variaveis?.tecidoSecundario || FORM_DEFAULTS.tecidoSecundario
+    );
 
     setCalhaDesconto(
       amb.variaveis?.regras?.calhaDesconto !== undefined
         ? String(amb.variaveis.regras.calhaDesconto)
-        : "-1.5"
+        : FORM_DEFAULTS.calhaDesconto
     );
     setTecidoPrincipalDesc(
       amb.variaveis?.regras?.voileAlturaDesconto !== undefined
         ? String(amb.variaveis.regras.voileAlturaDesconto)
-        : "0"
+        : FORM_DEFAULTS.tecidoPrincipalDesc
     );
     setTecidoSecundarioDesc(
       amb.variaveis?.regras?.blackoutAlturaDesconto !== undefined
         ? String(amb.variaveis.regras.blackoutAlturaDesconto)
-        : "-2"
+        : FORM_DEFAULTS.tecidoSecundarioDesc
     );
   }
 
   function resetForm() {
     setSelectedId(null);
-    setPrefixo("QT");
-    setSequencia(1);
-    setLargura("");
-    setAltura("");
-    setRecuo("");
-    setInstalacao("teto");
-    setObservacoes("");
-    setCalha("Forest preta");
-    setCalhaDesconto("-1.5");
-    setTecidoPrincipal("Voile branco");
-    setTecidoPrincipalDesc("0");
-    setTecidoSecundario("Blackout cinza");
-    setTecidoSecundarioDesc("-2");
+    setPrefixo(FORM_DEFAULTS.prefixo);
+    setSequencia(FORM_DEFAULTS.sequencia);
+    setLargura(FORM_DEFAULTS.largura);
+    setAltura(FORM_DEFAULTS.altura);
+    setRecuo(FORM_DEFAULTS.recuo);
+    setInstalacao(FORM_DEFAULTS.instalacao);
+    setObservacoes(FORM_DEFAULTS.observacoes);
+    setCalha(FORM_DEFAULTS.calha);
+    setCalhaDesconto(FORM_DEFAULTS.calhaDesconto);
+    setTecidoPrincipal(FORM_DEFAULTS.tecidoPrincipal);
+    setTecidoPrincipalDesc(FORM_DEFAULTS.tecidoPrincipalDesc);
+    setTecidoSecundario(FORM_DEFAULTS.tecidoSecundario);
+    setTecidoSecundarioDesc(FORM_DEFAULTS.tecidoSecundarioDesc);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -185,9 +245,10 @@ export default function MedicoesPage() {
         const res = await fetch(`/api/ambientes/${selectedId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(body),
         });
-        const atualizado: Ambiente = await res.json();
+        const atualizado = await parseJsonOrThrow<Ambiente>(res);
         setAmbientes((prev) =>
           prev.map((a) => (a._id === atualizado._id ? atualizado : a))
         );
@@ -197,9 +258,10 @@ export default function MedicoesPage() {
         const res = await fetch("/api/ambientes", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(body),
         });
-        const novo: Ambiente = await res.json();
+        const novo = await parseJsonOrThrow<Ambiente>(res);
         setAmbientes((prev) => [novo, ...prev]);
 
         setSequencia((prev) => prev + 1);
@@ -213,6 +275,7 @@ export default function MedicoesPage() {
       }
     } catch (err) {
       console.error("Erro ao salvar ambiente:", err);
+      alert(err instanceof Error ? err.message : "Erro ao salvar ambiente.");
     } finally {
       setSaving(false);
     }
@@ -223,14 +286,16 @@ export default function MedicoesPage() {
       const res = await fetch(`/api/ambientes/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status }),
       });
-      const atualizado: Ambiente = await res.json();
+      const atualizado = await parseJsonOrThrow<Ambiente>(res);
       setAmbientes((prev) =>
         prev.map((a) => (a._id === atualizado._id ? atualizado : a))
       );
     } catch (err) {
       console.error("Erro ao atualizar status:", err);
+      alert(err instanceof Error ? err.message : "Erro ao atualizar status.");
     }
   }
 
@@ -239,15 +304,21 @@ export default function MedicoesPage() {
     if (!confirmDelete) return;
 
     try {
-      await fetch(`/api/ambientes/${id}`, {
+      const res = await fetch(`/api/ambientes/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Erro ao excluir ambiente.");
+      }
       setAmbientes((prev) => prev.filter((a) => a._id !== id));
       if (selectedId === id) {
         resetForm();
       }
     } catch (err) {
       console.error("Erro ao excluir ambiente:", err);
+      alert(err instanceof Error ? err.message : "Erro ao excluir ambiente.");
     }
   }
 

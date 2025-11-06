@@ -118,6 +118,11 @@ export function MedicoesSidebar({
                         <p className="text-[0.6rem] text-slate-400 leading-tight">
                           {amb.medidas?.instalacao || "sem instalação"}
                         </p>
+                        {amb.medidoPor && (
+                          <p className="text-[0.6rem] text-slate-400 leading-tight">
+                            Medido por {amb.medidoPor}
+                          </p>
+                        )}
                       </div>
                     </button>
                     <button

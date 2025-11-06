@@ -12,6 +12,8 @@ export interface IAmbiente extends Document {
   prefixo: string;
   sequencia: number;
   codigo: string;
+  medidoPor?: string;
+  medidoPorId?: mongoose.Types.ObjectId;
   medidas?: {
     largura?: number;
     altura?: number;
@@ -97,6 +99,8 @@ const AmbienteSchema = new Schema<IAmbiente>(
     prefixo: { type: String, required: true },
     sequencia: { type: Number, required: true },
     codigo: { type: String, required: true },
+    medidoPor: { type: String },
+    medidoPorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
     medidas: MedidasSchema,
     variaveis: VariaveisSchema,

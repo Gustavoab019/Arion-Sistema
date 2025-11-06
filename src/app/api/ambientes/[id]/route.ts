@@ -2,6 +2,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/src/lib/db";
 import Ambiente, { IAmbiente } from "@/src/lib/models/Ambiente";
+import { getCurrentUser } from "@/src/lib/getCurrentUser";
+import mongoose from "mongoose";
 
 // mesmos tipos da outra rota
 type MedidasInput = {
@@ -65,14 +67,28 @@ function montarCalculado(data: AmbienteInput) {
   };
 }
 
-// Next 13/14 app router entrega o contexto assim:
+// ✅ Next.js 15+ params é uma Promise
 type RouteContext = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export async function GET(_req: Request, { params }: RouteContext) {
+export async function GET(
+  req: Request,
+  context: RouteContext
+) {
+  // ✅ AWAIT params
+  const params = await context.params;
+  
+  const user = await getCurrentUser(req);
+  if (!user) {
+    return NextResponse.json(
+      { message: "Não autenticado." },
+      { status: 401 }
+    );
+  }
+
   await connectDB();
   const ambiente = await Ambiente.findById(params.id);
   if (!ambiente) {
@@ -84,77 +100,147 @@ export async function GET(_req: Request, { params }: RouteContext) {
   return NextResponse.json(ambiente);
 }
 
-export async function PATCH(req: Request, { params }: RouteContext) {
-  await connectDB();
-  const patchData = (await req.json()) as Partial<AmbienteInput>;
+export async function PATCH(
+  req: Request,
+  context: RouteContext
+) {
+  try {
+    // ✅ AWAIT params PRIMEIRO
+    const params = await context.params;
+    
+    console.log("🔵 [PATCH] params.id:", params.id);
 
-  const atual = await Ambiente.findById(params.id);
-  if (!atual) {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { message: "Não autenticado." },
+        { status: 401 }
+      );
+    }
+
+    await connectDB();
+    const patchData = (await req.json()) as Partial<AmbienteInput>;
+
+    console.log("[PATCH /api/ambientes/:id] user", user._id, "params.id", params.id);
+    console.log("[PATCH /api/ambientes/:id] patchData", JSON.stringify(patchData));
+
+    // ✅ Validação de ID
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+      console.error("❌ [PATCH] ID inválido:", params.id);
+      return NextResponse.json(
+        { message: "ID inválido" },
+        { status: 400 }
+      );
+    }
+
+    const atual = await Ambiente.findById(params.id);
+    if (!atual) {
+      console.log("[PATCH /api/ambientes/:id] ambiente não encontrado", params.id);
+      return NextResponse.json(
+        { message: "Ambiente não encontrado" },
+        { status: 404 }
+      );
+    }
+
+    console.log("✅ [PATCH] Ambiente encontrado:", atual.codigo);
+
+    // Se for apenas status (otimização)
+    if (patchData.status && Object.keys(patchData).length === 1) {
+      console.log("🔵 [PATCH] Atualizando apenas status:", patchData.status);
+      atual.status = patchData.status;
+      atual.updatedBy = new mongoose.Types.ObjectId(user._id);
+      await atual.save();
+      console.log("✅ [PATCH] Status atualizado com sucesso");
+      return NextResponse.json(atual);
+    }
+
+    // Atualização completa
+    const atualObj = atual.toObject() as IAmbiente;
+
+    const bodyCompleto: AmbienteInput = {
+      obraId: patchData.obraId ?? (atualObj.obraId?.toString() ?? undefined),
+      andar: patchData.andar ?? atualObj.andar,
+      quarto: patchData.quarto ?? atualObj.quarto,
+      prefixo: patchData.prefixo ?? atualObj.prefixo,
+      sequencia: patchData.sequencia ?? atualObj.sequencia,
+      codigo: patchData.codigo ?? atualObj.codigo,
+      medidas: {
+        largura: patchData.medidas?.largura ?? atualObj.medidas?.largura,
+        altura: patchData.medidas?.altura ?? atualObj.medidas?.altura,
+        recuo: patchData.medidas?.recuo ?? atualObj.medidas?.recuo,
+        instalacao:
+          patchData.medidas?.instalacao ?? atualObj.medidas?.instalacao,
+      },
+      variaveis: {
+        calha: patchData.variaveis?.calha ?? atualObj.variaveis?.calha,
+        tecidoPrincipal:
+          patchData.variaveis?.tecidoPrincipal ??
+          atualObj.variaveis?.tecidoPrincipal,
+        tecidoSecundario:
+          patchData.variaveis?.tecidoSecundario ??
+          atualObj.variaveis?.tecidoSecundario,
+        regras: {
+          calhaDesconto:
+            patchData.variaveis?.regras?.calhaDesconto ??
+            atualObj.variaveis?.regras?.calhaDesconto,
+          blackoutAlturaDesconto:
+            patchData.variaveis?.regras?.blackoutAlturaDesconto ??
+            atualObj.variaveis?.regras?.blackoutAlturaDesconto,
+          voileAlturaDesconto:
+            patchData.variaveis?.regras?.voileAlturaDesconto ??
+            atualObj.variaveis?.regras?.voileAlturaDesconto,
+          alturaInstalacaoOffset:
+            patchData.variaveis?.regras?.alturaInstalacaoOffset ??
+            atualObj.variaveis?.regras?.alturaInstalacaoOffset,
+        },
+      },
+      observacoes: patchData.observacoes ?? atualObj.observacoes,
+      status: patchData.status ?? atualObj.status,
+    };
+
+    const calculado = montarCalculado(bodyCompleto);
+
+    const atualizado = await Ambiente.findByIdAndUpdate(
+      params.id,
+      {
+        ...patchData,
+        calculado,
+        updatedBy: user._id,
+      },
+      { new: true }
+    );
+
+    console.log("✅ [PATCH] Ambiente atualizado com sucesso");
+    return NextResponse.json(atualizado);
+  } catch (error) {
+    console.error("❌ [PATCH] Erro:", error);
     return NextResponse.json(
-      { message: "Ambiente não encontrado" },
-      { status: 404 }
+      { 
+        message: "Erro ao atualizar ambiente",
+        error: process.env.NODE_ENV === "development" 
+          ? (error instanceof Error ? error.message : String(error))
+          : undefined
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  context: RouteContext
+) {
+  // ✅ AWAIT params
+  const params = await context.params;
+  
+  const user = await getCurrentUser(req);
+  if (!user) {
+    return NextResponse.json(
+      { message: "Não autenticado." },
+      { status: 401 }
     );
   }
 
-  // montar objeto completo (atual + patch)
-  const atualObj = atual.toObject() as IAmbiente;
-
-  const bodyCompleto: AmbienteInput = {
-    obraId: patchData.obraId ?? (atualObj.obraId?.toString() ?? undefined),
-    andar: patchData.andar ?? atualObj.andar,
-    quarto: patchData.quarto ?? atualObj.quarto,
-    prefixo: patchData.prefixo ?? atualObj.prefixo,
-    sequencia: patchData.sequencia ?? atualObj.sequencia,
-    codigo: patchData.codigo ?? atualObj.codigo,
-    medidas: {
-      largura: patchData.medidas?.largura ?? atualObj.medidas?.largura,
-      altura: patchData.medidas?.altura ?? atualObj.medidas?.altura,
-      recuo: patchData.medidas?.recuo ?? atualObj.medidas?.recuo,
-      instalacao:
-        patchData.medidas?.instalacao ?? atualObj.medidas?.instalacao,
-    },
-    variaveis: {
-      calha: patchData.variaveis?.calha ?? atualObj.variaveis?.calha,
-      tecidoPrincipal:
-        patchData.variaveis?.tecidoPrincipal ??
-        atualObj.variaveis?.tecidoPrincipal,
-      tecidoSecundario:
-        patchData.variaveis?.tecidoSecundario ??
-        atualObj.variaveis?.tecidoSecundario,
-      regras: {
-        calhaDesconto:
-          patchData.variaveis?.regras?.calhaDesconto ??
-          atualObj.variaveis?.regras?.calhaDesconto,
-        blackoutAlturaDesconto:
-          patchData.variaveis?.regras?.blackoutAlturaDesconto ??
-          atualObj.variaveis?.regras?.blackoutAlturaDesconto,
-        voileAlturaDesconto:
-          patchData.variaveis?.regras?.voileAlturaDesconto ??
-          atualObj.variaveis?.regras?.voileAlturaDesconto,
-        alturaInstalacaoOffset:
-          patchData.variaveis?.regras?.alturaInstalacaoOffset ??
-          atualObj.variaveis?.regras?.alturaInstalacaoOffset,
-      },
-    },
-    observacoes: patchData.observacoes ?? atualObj.observacoes,
-    status: patchData.status ?? atualObj.status,
-  };
-
-  const calculado = montarCalculado(bodyCompleto);
-
-  const atualizado = await Ambiente.findByIdAndUpdate(
-    params.id,
-    {
-      ...patchData,
-      calculado,
-    },
-    { new: true }
-  );
-
-  return NextResponse.json(atualizado);
-}
-
-export async function DELETE(_req: Request, { params }: RouteContext) {
   await connectDB();
 
   const deleted = await Ambiente.findByIdAndDelete(params.id);

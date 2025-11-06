@@ -13,6 +13,7 @@ export type Ambiente = {
   quarto: string;
   prefixo: string;
   sequencia: number;
+  medidoPor?: string;
   medidas?: {
     largura?: number;
     altura?: number;

@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/src/lib/db";
 import User, { IUser } from "@/src/lib/models/User";
-import { signAuthToken, createAuthCookie } from "@/src/lib/auth";
+import {
+  signAuthToken,
+  AUTH_COOKIE_NAME,
+  AUTH_COOKIE_MAX_AGE,
+} from "@/src/lib/auth";
 
 type RegisterBody = {
   nome: string;
@@ -56,7 +60,14 @@ export async function POST(req: Request) {
     role: novo.role,
   });
 
-  res.headers.set("Set-Cookie", createAuthCookie(token));
+  res.cookies.set({
+    name: AUTH_COOKIE_NAME,
+    value: token,
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: AUTH_COOKIE_MAX_AGE,
+  });
 
   return res;
 }
