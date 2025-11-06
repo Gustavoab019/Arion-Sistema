@@ -1,0 +1,205 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+/* ====== ajustes pro nosso sistema de medições ====== */
+
+/* container padrão da página */
+.page-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* cards estilo iOS */
+.card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 1.25rem;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.02);
+  padding: 1rem;
+}
+
+/* inputs e selects padrão */
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.875rem;
+  background: #ffffff;
+  transition: border 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.25);
+  background: #ffffff;
+}
+
+/* labels */
+label {
+  font-size: 0.75rem;
+  color: #475569;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+/* botão principal */
+.btn-primary {
+  background: #000;
+  color: #fff;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  width: 100%;
+  text-align: center;
+}
+
+.btn-primary:hover {
+  background: #111827;
+}
+
+/* lista de ambientes */
+.ambiente-item {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  border-radius: 1.25rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.65rem;
+}
+
+/* grid simples (fallback caso não use tailwind na página) */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+/* ====== Melhorias para a página de medições refatorada ====== */
+
+/* Remove setas do input number no Chrome, Safari, Edge */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Remove setas do input number no Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Animações suaves para elementos que aparecem */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-from-top {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.slide-in-from-top-2 {
+  animation-name: slide-in-from-top;
+}
+
+.duration-300 {
+  animation-duration: 300ms;
+}
+
+/* Scrollbar personalizada para melhor visual */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Suaviza transições globais para melhor UX */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Melhora o focus visible para acessibilidade */
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Suporte para backdrop blur em navegadores antigos */
+@supports not (backdrop-filter: blur(12px)) {
+  .backdrop-blur-xl {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+  }
+}
