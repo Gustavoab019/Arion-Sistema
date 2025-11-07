@@ -9,6 +9,8 @@ import {
   Sofa,
   Trees,
   Ruler,
+  X,
+  Sparkles,
 } from "lucide-react";
 import { PrefixoItem } from "../types";
 
@@ -88,23 +90,30 @@ export function MedicoesForm({
   saved,
 }: MedicoesFormProps) {
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-6">
-      {/* tipo + sequência */}
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+      {/* Tipo + Sequência */}
       <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
         <div className="flex items-center justify-between mb-4 gap-2">
-          <h2 className="text-sm font-semibold text-slate-800">
-            {selectedId ? "Editando ambiente" : "Tipo de ambiente"}
-          </h2>
+          <div className="flex items-center gap-2">
+            {selectedId && (
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            )}
+            <h2 className="text-sm font-semibold text-slate-900">
+              {selectedId ? "Editando ambiente" : "Novo ambiente"}
+            </h2>
+          </div>
           {selectedId && (
             <button
               type="button"
               onClick={onResetEdit}
-              className="text-xs text-slate-400 hover:text-slate-600"
+              className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 transition"
             >
-              sair da edição
+              <X className="w-3.5 h-3.5" />
+              Cancelar
             </button>
           )}
         </div>
+
         <div className="grid grid-cols-5 gap-2 max-sm:grid-cols-3">
           {PREFIXOS.map((p) => {
             const Icon = p.icon;
@@ -114,23 +123,21 @@ export function MedicoesForm({
                 key={p.value}
                 type="button"
                 onClick={() => onChangePrefixo(p.value)}
-                className={`flex flex-col items-start gap-1 rounded-xl border px-2.5 py-2 transition ${
+                className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 transition-all ${
                   active
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-md scale-105"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-5 h-5" />
                 <span className="text-xs font-semibold">{p.value}</span>
-                <span className="text-[0.6rem] text-slate-400 leading-none">
-                  {p.label}
-                </span>
               </button>
             );
           })}
         </div>
-        <div className="mt-4">
-          <label className="text-xs font-medium text-slate-600 mb-1 block">
+
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <label className="text-xs font-medium text-slate-600 mb-2 block">
             Sequência
           </label>
           <input
@@ -138,88 +145,95 @@ export function MedicoesForm({
             min={1}
             value={sequencia}
             onChange={(e) => onChangeSequencia(Number(e.target.value))}
-            className="w-24 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900"
+            className="w-24 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-slate-900 transition"
           />
         </div>
       </section>
 
-      {/* medidas */}
+      {/* Medidas */}
       <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white">
-            <Ruler className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
+            <Ruler className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-slate-800">
-              Medidas do vão
-            </h2>
-            <p className="text-xs text-slate-400">sempre em centímetros</p>
+            <h2 className="text-sm font-semibold text-slate-900">Medidas do vão</h2>
+            <p className="text-xs text-slate-500">Em centímetros</p>
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-4">
-          {/* largura */}
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Largura */}
           <div>
-            <label className="text-xs font-medium text-slate-600 mb-1 block">
-              Largura
+            <label className="text-xs font-medium text-slate-700 mb-2 block">
+              Largura <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <input
                 type="number"
+                step="0.1"
                 value={largura}
                 onChange={(e) => onChangeLargura(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 placeholder-slate-400"
-                placeholder="0"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 pr-10 text-sm font-medium outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-slate-900 placeholder-slate-400 transition"
+                placeholder="0.0"
+                required
               />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[0.6rem] text-slate-400">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">
                 cm
               </span>
             </div>
           </div>
-          {/* altura */}
+
+          {/* Altura */}
           <div>
-            <label className="text-xs font-medium text-slate-600 mb-1 block">
-              Altura
+            <label className="text-xs font-medium text-slate-700 mb-2 block">
+              Altura <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <input
                 type="number"
+                step="0.1"
                 value={altura}
                 onChange={(e) => onChangeAltura(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 placeholder-slate-400"
-                placeholder="0"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 pr-10 text-sm font-medium outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-slate-900 placeholder-slate-400 transition"
+                placeholder="0.0"
+                required
               />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[0.6rem] text-slate-400">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">
                 cm
               </span>
             </div>
           </div>
-          {/* recuo */}
+
+          {/* Recuo */}
           <div>
-            <label className="text-xs font-medium text-slate-600 mb-1 block">
+            <label className="text-xs font-medium text-slate-700 mb-2 block">
               Recuo
             </label>
             <div className="relative">
               <input
                 type="number"
+                step="0.1"
                 value={recuo}
                 onChange={(e) => onChangeRecuo(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 placeholder-slate-400"
-                placeholder="0"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 pr-10 text-sm font-medium outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-slate-900 placeholder-slate-400 transition"
+                placeholder="0.0"
               />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[0.6rem] text-slate-400">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">
                 cm
               </span>
             </div>
           </div>
-          {/* instalação */}
+
+          {/* Instalação */}
           <div>
-            <label className="text-xs font-medium text-slate-600 mb-1 block">
+            <label className="text-xs font-medium text-slate-700 mb-2 block">
               Instalação
             </label>
             <select
               value={instalacao}
               onChange={(e) => onChangeInstalacao(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-slate-900 transition"
             >
               <option value="teto">Teto</option>
               <option value="parede">Parede</option>
@@ -229,113 +243,146 @@ export function MedicoesForm({
         </div>
       </section>
 
-      {/* variáveis */}
+      {/* Variáveis de Produção */}
       <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-800 mb-4">
-          Variáveis de produção
-        </h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          {/* calha */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-slate-600">Calha</label>
-            <input
-              value={calha}
-              onChange={(e) => onChangeCalha(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900"
-            />
-            <label className="text-[0.6rem] text-slate-400">
-              Desconto calha (cm)
-            </label>
-            <input
-              type="number"
-              value={calhaDesconto}
-              onChange={(e) => onChangeCalhaDesconto(e.target.value)}
-              className="w-28 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900"
-            />
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-4 h-4 text-slate-600" />
+          <h2 className="text-sm font-semibold text-slate-900">
+            Variáveis de produção
+          </h2>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Calha */}
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-slate-700 mb-2 block">
+                Calha
+              </label>
+              <input
+                value={calha}
+                onChange={(e) => onChangeCalha(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-slate-900 transition"
+                placeholder="Ex: Forest preta"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-2 block">
+                Desconto (cm)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={calhaDesconto}
+                onChange={(e) => onChangeCalhaDesconto(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-slate-900 text-slate-900 transition"
+                placeholder="0.0"
+              />
+            </div>
           </div>
 
-          {/* tecido principal */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-slate-600">
-              Tecido principal
-            </label>
-            <input
-              value={tecidoPrincipal}
-              onChange={(e) => onChangeTecidoPrincipal(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900"
-            />
-            <label className="text-[0.6rem] text-slate-400">
-              Desconto altura (cm)
-            </label>
-            <input
-              type="number"
-              value={tecidoPrincipalDesc}
-              onChange={(e) => onChangeTecidoPrincipalDesc(e.target.value)}
-              className="w-28 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900"
-            />
+          {/* Tecido Principal */}
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-slate-700 mb-2 block">
+                Tecido principal
+              </label>
+              <input
+                value={tecidoPrincipal}
+                onChange={(e) => onChangeTecidoPrincipal(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-slate-900 transition"
+                placeholder="Ex: Voile branco"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-2 block">
+                Desconto altura (cm)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={tecidoPrincipalDesc}
+                onChange={(e) => onChangeTecidoPrincipalDesc(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-slate-900 text-slate-900 transition"
+                placeholder="0.0"
+              />
+            </div>
           </div>
 
-          {/* tecido secundario */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-slate-600">
-              Tecido secundário
-            </label>
-            <input
-              value={tecidoSecundario}
-              onChange={(e) => onChangeTecidoSecundario(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900"
-            />
-            <label className="text-[0.6rem] text-slate-400">
-              Desconto altura (cm)
-            </label>
-            <input
-              type="number"
-              value={tecidoSecundarioDesc}
-              onChange={(e) => onChangeTecidoSecundarioDesc(e.target.value)}
-              className="w-28 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 text-slate-900"
-            />
+          {/* Tecido Secundário */}
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-slate-700 mb-2 block">
+                Tecido secundário
+              </label>
+              <input
+                value={tecidoSecundario}
+                onChange={(e) => onChangeTecidoSecundario(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-slate-900 transition"
+                placeholder="Ex: Blackout cinza"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-500 mb-2 block">
+                Desconto altura (cm)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={tecidoSecundarioDesc}
+                onChange={(e) => onChangeTecidoSecundarioDesc(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-slate-900 text-slate-900 transition"
+                placeholder="0.0"
+              />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* observações */}
+      {/* Observações */}
       <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-        <label className="text-xs font-medium text-slate-600 mb-2 block">
+        <label className="text-xs font-medium text-slate-700 mb-2 block">
           Observações
         </label>
         <textarea
           rows={3}
           value={observacoes}
           onChange={(e) => onChangeObservacoes(e.target.value)}
-          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200 resize-none text-slate-900 placeholder-slate-400"
+          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 resize-none text-slate-900 placeholder-slate-400 transition"
           placeholder="Ex: afastar 10cm do aro, atenção no lado direito..."
         />
       </section>
 
+      {/* Submit Button */}
       <button
         type="submit"
         disabled={saving}
-        className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition ${
+        className={`sticky bottom-4 w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all shadow-lg ${
           saved
             ? "bg-emerald-500 text-white"
             : saving
-            ? "bg-slate-300 text-slate-500"
-            : "bg-slate-900 text-white hover:bg-slate-800"
+            ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+            : "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-xl"
         }`}
       >
         {saved ? (
           <>
-            <CheckCircle2 className="w-4 h-4" />
-            {selectedId ? "Ambiente atualizado" : "Ambiente salvo"}
+            <CheckCircle2 className="w-5 h-5" />
+            {selectedId ? "Atualizado com sucesso!" : "Salvo com sucesso!"}
+          </>
+        ) : saving ? (
+          <>
+            <div className="w-5 h-5 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />
+            Salvando...
           </>
         ) : selectedId ? (
           <>
-            <Plus className="w-4 h-4 rotate-90" />
+            <CheckCircle2 className="w-5 h-5" />
             Atualizar ambiente
           </>
         ) : (
           <>
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Adicionar ambiente
           </>
         )}

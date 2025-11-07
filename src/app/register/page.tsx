@@ -12,6 +12,7 @@ import {
   Mail,
   User2,
 } from "lucide-react";
+import { useCurrentUser } from "@/src/app/providers/UserProvider";
 
 const roles = [
   { value: "gerente", label: "Gerente" },
@@ -21,6 +22,7 @@ const roles = [
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { refresh } = useCurrentUser();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -75,11 +77,9 @@ export default function RegisterPage() {
         throw new Error("Sessão não criada. Verifique se os cookies estão habilitados.");
       }
 
-      if (typeof window !== "undefined") {
-        window.location.href = "/medicoes";
-      } else {
-        router.replace("/medicoes");
-      }
+      await refresh();
+
+      router.replace("/medicoes");
     } catch (err) {
       console.error("Erro ao registrar:", err);
       setError(err instanceof Error ? err.message : "Erro inesperado.");

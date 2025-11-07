@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Building2, Loader2, Lock, Mail } from "lucide-react";
+import { useCurrentUser } from "@/src/app/providers/UserProvider";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refresh } = useCurrentUser();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,10 +46,18 @@ export default function LoginPage() {
 
       await res.json();
 
-      // Redireciona usando o router do Next.js
-      // O middleware vai validar o cookie na próxima navegação
-      router.push("/medicoes");
-      router.refresh();
+      const me = await fetch("/api/auth/me", {
+        credentials: "include",
+        cache: "no-store",
+      }).then((resMe) => resMe.json());
+
+      if (!me?.user) {
+        throw new Error("Sessão não criada. Verifique se os cookies estão habilitados.");
+      }
+
+      await refresh();
+
+      router.replace("/medicoes");
     } catch (err) {
       console.error("Erro ao fazer login:", err);
       setError(err instanceof Error ? err.message : "Erro inesperado.");

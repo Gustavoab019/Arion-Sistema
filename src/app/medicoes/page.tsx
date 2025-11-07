@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MedicoesHeader } from "./components/MedicoesHeader";
 import { MedicoesForm } from "./components/MedicoesForm";
 import { MedicoesSidebar } from "./components/MedicoesSidebar";
@@ -80,6 +80,17 @@ export default function MedicoesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const codigoPreview = `${prefixo}${quarto}-${sequencia}`;
+  const stats = useMemo(() => {
+    return ambientes.reduce(
+      (acc, amb) => {
+        if (amb.status === "completo") acc.done += 1;
+        else if (amb.status === "revisar") acc.review += 1;
+        else acc.pending += 1;
+        return acc;
+      },
+      { pending: 0, review: 0, done: 0 }
+    );
+  }, [ambientes]);
 
   // carregar obras
   useEffect(() => {
@@ -353,6 +364,9 @@ export default function MedicoesPage() {
         onPrevQuarto={handleQuartoAnterior}
         onNextQuarto={handleProximoQuarto}
         codigoPreview={codigoPreview}
+        stats={stats}
+        totalAmbientes={ambientes.length}
+        loadingAmbientes={loading}
       />
 
       <main className="max-w-6xl mx-auto px-4 py-6 grid gap-6 lg:grid-cols-[1fr,360px]">
