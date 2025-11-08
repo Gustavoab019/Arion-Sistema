@@ -57,7 +57,7 @@ export default function LoginPage() {
 
       await refresh();
 
-      router.replace("/medicoes");
+      router.replace("/dashboard");
     } catch (err) {
       console.error("Erro ao fazer login:", err);
       setError(err instanceof Error ? err.message : "Erro inesperado.");

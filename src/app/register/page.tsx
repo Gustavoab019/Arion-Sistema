@@ -79,7 +79,7 @@ export default function RegisterPage() {
 
       await refresh();
 
-      router.replace("/medicoes");
+      router.replace("/dashboard");
     } catch (err) {
       console.error("Erro ao registrar:", err);
       setError(err instanceof Error ? err.message : "Erro inesperado.");

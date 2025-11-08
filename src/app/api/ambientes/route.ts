@@ -2,7 +2,9 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/src/lib/db";
 import Ambiente from "@/src/lib/models/Ambiente";
+import Obra from "@/src/lib/models/Obra";
 import { getCurrentUser } from "@/src/lib/getCurrentUser";
+import mongoose from "mongoose";
 
 // tipos auxiliares só pra essa rota
 type MedidasInput = {
@@ -87,6 +89,28 @@ export async function GET(req: Request) {
   if (quarto) filtro.quarto = quarto;
   if (obraId) filtro.obraId = obraId;
 
+  if (user.role !== "gerente") {
+    const minhasObras = await Obra.find({
+      "responsaveis.userId": new mongoose.Types.ObjectId(user._id),
+    }).select("_id");
+    const idsPermitidos = minhasObras.map((obra) => obra._id.toString());
+
+    if (idsPermitidos.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    if (obraId) {
+      if (!idsPermitidos.includes(obraId)) {
+        return NextResponse.json({ message: "Sem permissão." }, { status: 403 });
+      }
+      filtro.obraId = new mongoose.Types.ObjectId(obraId);
+    } else {
+      filtro.obraId = {
+        $in: idsPermitidos.map((id) => new mongoose.Types.ObjectId(id)),
+      };
+    }
+  }
+
   const ambientes = await Ambiente.find(filtro).sort({ createdAt: -1 });
   return NextResponse.json(ambientes);
 }
@@ -102,6 +126,30 @@ export async function POST(req: Request) {
 
   await connectDB();
   const data = (await req.json()) as AmbienteInput;
+
+  if (user.role !== "gerente") {
+    if (!data.obraId) {
+      return NextResponse.json(
+        { message: "Obra obrigatória para criar ambiente." },
+        { status: 400 }
+      );
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(data.obraId)) {
+      return NextResponse.json(
+        { message: "Obra inválida." },
+        { status: 400 }
+      );
+    }
+
+    const obraPermitida = await Obra.exists({
+      _id: new mongoose.Types.ObjectId(data.obraId),
+      "responsaveis.userId": new mongoose.Types.ObjectId(user._id),
+    });
+    if (!obraPermitida) {
+      return NextResponse.json({ message: "Sem permissão." }, { status: 403 });
+    }
+  }
 
   const { prefixo, quarto } = data;
 

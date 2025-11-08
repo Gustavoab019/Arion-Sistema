@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/src/lib/db";
 import Ambiente, { IAmbiente } from "@/src/lib/models/Ambiente";
 import { getCurrentUser } from "@/src/lib/getCurrentUser";
+import Obra from "@/src/lib/models/Obra";
 import mongoose from "mongoose";
 
 // mesmos tipos da outra rota
@@ -67,6 +68,18 @@ function montarCalculado(data: AmbienteInput) {
   };
 }
 
+async function usuarioPodeAcessarObra(user: { _id: string; role: string }, obraId?: mongoose.Types.ObjectId | null) {
+  if (user.role === "gerente") return true;
+  if (!obraId) return false;
+
+  const permitido = await Obra.exists({
+    _id: obraId,
+    "responsaveis.userId": new mongoose.Types.ObjectId(user._id),
+  });
+
+  return Boolean(permitido);
+}
+
 // ✅ Next.js 15+ params é uma Promise
 type RouteContext = {
   params: Promise<{
@@ -96,6 +109,9 @@ export async function GET(
       { message: "Ambiente não encontrado" },
       { status: 404 }
     );
+  }
+  if (!(await usuarioPodeAcessarObra(user, ambiente.obraId))) {
+    return NextResponse.json({ message: "Sem permissão." }, { status: 403 });
   }
   return NextResponse.json(ambiente);
 }
@@ -140,6 +156,10 @@ export async function PATCH(
         { message: "Ambiente não encontrado" },
         { status: 404 }
       );
+    }
+
+    if (!(await usuarioPodeAcessarObra(user, atual.obraId))) {
+      return NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     }
 
     console.log("✅ [PATCH] Ambiente encontrado:", atual.codigo);
@@ -242,14 +262,19 @@ export async function DELETE(
   }
 
   await connectDB();
-
-  const deleted = await Ambiente.findByIdAndDelete(params.id);
-  if (!deleted) {
+  const ambiente = await Ambiente.findById(params.id);
+  if (!ambiente) {
     return NextResponse.json(
       { message: "Ambiente não encontrado" },
       { status: 404 }
     );
   }
+
+  if (!(await usuarioPodeAcessarObra(user, ambiente.obraId))) {
+    return NextResponse.json({ message: "Sem permissão." }, { status: 403 });
+  }
+
+  await Ambiente.findByIdAndDelete(params.id);
 
   return NextResponse.json({ ok: true });
 }

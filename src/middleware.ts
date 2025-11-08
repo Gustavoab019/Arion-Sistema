@@ -5,7 +5,7 @@ import { AUTH_COOKIE_NAME, verifyAuthToken } from "@/src/lib/auth";
 // ✅ FORÇA o middleware a usar Node.js Runtime
 export const runtime = 'nodejs';
 
-const PROTECTED_PATHS = ["/medicoes", "/obras"];
+const PROTECTED_PATHS = ["/", "/dashboard", "/medicoes", "/obras", "/calhas"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -41,5 +41,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/medicoes/:path*", "/obras/:path*"],
+  matcher: ["/", "/dashboard/:path*", "/medicoes/:path*", "/obras/:path*", "/calhas/:path*"],
 };

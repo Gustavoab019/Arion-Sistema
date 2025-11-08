@@ -1,15 +1,15 @@
 import { LucideIcon } from "lucide-react";
+import type { Obra as ObraBase } from "@/src/app/obras/types";
 
-export type Obra = {
-  _id: string;
-  nome: string;
-};
+export type Obra = ObraBase;
 
 export type AmbienteStatus = "pendente" | "revisar" | "completo";
 
 export type Ambiente = {
   _id: string;
   codigo: string;
+  obraId?: string;
+  obra?: string;
   quarto: string;
   prefixo: string;
   sequencia: number;
@@ -32,6 +32,8 @@ export type Ambiente = {
     };
   };
   status?: AmbienteStatus;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type PrefixoItem = {

@@ -5,8 +5,9 @@ import { MedicoesHeader } from "./components/MedicoesHeader";
 import { MedicoesForm } from "./components/MedicoesForm";
 import { MedicoesSidebar } from "./components/MedicoesSidebar";
 import { Ambiente, Obra } from "./types";
+import { ACTIVE_OBRA_KEY } from "@/src/lib/constants";
+import { parseJsonOrThrow } from "@/src/lib/http";
 
-const ACTIVE_OBRA_KEY = "sistema-cortinados:obra-ativa";
 const FORM_DEFAULTS = {
   prefixo: "QT",
   sequencia: 1,
@@ -22,23 +23,6 @@ const FORM_DEFAULTS = {
   tecidoSecundario: "Blackout cinza",
   tecidoSecundarioDesc: "-2",
 };
-
-async function parseJsonOrThrow<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    let message = "Erro ao processar a solicitação.";
-    try {
-      const error = await res.json();
-      message = error?.message || error?.error || message;
-    } catch {
-      const text = await res.text();
-      if (text) {
-        message = text;
-      }
-    }
-    throw new Error(message);
-  }
-  return res.json() as Promise<T>;
-}
 
 export default function MedicoesPage() {
   const [obras, setObras] = useState<Obra[]>([]);

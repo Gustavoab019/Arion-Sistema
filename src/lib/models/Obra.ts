@@ -9,6 +9,11 @@ export interface IObra {
   andarFinal?: number;
   status?: "ativo" | "finalizado" | "pausado";
   observacoes?: string;
+  responsaveis?: {
+    userId: mongoose.Types.ObjectId;
+    nome: string;
+    role: "gerente" | "instalador" | "producao";
+  }[];
 }
 
 const ObraSchema = new Schema<IObra>(
@@ -24,6 +29,16 @@ const ObraSchema = new Schema<IObra>(
       default: "ativo",
     },
     observacoes: { type: String },
+    responsaveis: [
+      {
+        userId: { type: Schema.Types.ObjectId, ref: "User" },
+        nome: { type: String },
+        role: {
+          type: String,
+          enum: ["gerente", "instalador", "producao"],
+        },
+      },
+    ],
   },
   {
     timestamps: true,
