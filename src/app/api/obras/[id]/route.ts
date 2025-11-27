@@ -4,6 +4,7 @@ import { connectDB } from "@/src/lib/db";
 import Obra from "@/src/lib/models/Obra";
 import User from "@/src/lib/models/User";
 import { getCurrentUser } from "@/src/lib/getCurrentUser";
+import { notifyObraResponsaveis } from "@/src/lib/notifications";
 import mongoose from "mongoose";
 
 async function montarResponsaveis(responsavelIds?: unknown) {
@@ -86,9 +87,28 @@ export async function PATCH(req: Request, context: RouteContext) {
   const body = await req.json();
   const { responsavelIds, ...resto } = body ?? {};
 
+  // Buscar obra atual para comparar responsáveis
+  const obraAtual = await Obra.findById(params.id);
+  if (!obraAtual) {
+    return NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+  }
+
   const updateData: Record<string, unknown> = { ...resto };
+  let novosResponsaveis: mongoose.Types.ObjectId[] = [];
+
   if (responsavelIds !== undefined) {
-    updateData.responsaveis = await montarResponsaveis(responsavelIds);
+    const novosResponsaveisData = await montarResponsaveis(responsavelIds);
+    updateData.responsaveis = novosResponsaveisData;
+
+    // Identificar novos responsáveis (que não estavam na lista anterior)
+    if (novosResponsaveisData && Array.isArray(novosResponsaveisData)) {
+      const responsaveisAtuaisIds = new Set(
+        (obraAtual.responsaveis || []).map((r) => r.userId?.toString())
+      );
+      novosResponsaveis = novosResponsaveisData
+        .filter((r) => !responsaveisAtuaisIds.has(r.userId.toString()))
+        .map((r) => new mongoose.Types.ObjectId(r.userId as string));
+    }
   }
 
   const obra = await Obra.findByIdAndUpdate(
@@ -99,6 +119,11 @@ export async function PATCH(req: Request, context: RouteContext) {
 
   if (!obra) {
     return NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+  }
+
+  // Notificar apenas os novos responsáveis
+  if (novosResponsaveis.length > 0) {
+    await notifyObraResponsaveis(obra.toObject(), novosResponsaveis);
   }
 
   return NextResponse.json(obra);

@@ -3,21 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
-  Building2,
   Loader2,
-  ShieldCheck,
-  BadgeCheck,
   Lock,
   Mail,
   User2,
+  ArrowRight,
+  Shield,
 } from "lucide-react";
 import { useCurrentUser } from "@/src/app/providers/UserProvider";
 
 const roles = [
-  { value: "gerente", label: "Gerente" },
-  { value: "instalador", label: "Instalador" },
-  { value: "producao", label: "Produção" },
+  { value: "gerente", label: "Gerente", description: "Acesso total" },
+  { value: "instalador", label: "Instalador", description: "Medições em campo" },
+  { value: "producao", label: "Produção", description: "Gestão de cortes" },
 ];
 
 export default function RegisterPage() {
@@ -89,181 +89,185 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-5xl grid gap-8 lg:grid-cols-[1.1fr,0.9fr] items-center">
-        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-400">
-                Sistema interno
-              </p>
-              <h1 className="text-xl font-semibold text-slate-900">
-                Cortinados &amp; Cia
-              </h1>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-lg">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center mb-4">
+            <Image
+              src="/logo.png"
+              alt="Arion Logo"
+              width={120}
+              height={120}
+              className="object-contain"
+              priority
+            />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-1">
+            Arion - Mobiliário e Decoração Lda
+          </h1>
+          <p className="text-sm text-slate-500">
+            Criar nova conta no sistema
+          </p>
+        </div>
+
+        {/* Form Card */}
+        <div className="bg-white/80 backdrop-blur-sm border border-slate-200/60 rounded-2xl p-8 shadow-xl shadow-slate-900/5">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-1">
+              Cadastrar usuário
+            </h2>
+            <p className="text-sm text-slate-500">
+              Preencha os dados para criar acesso
+            </p>
           </div>
 
-          <div className="space-y-4 text-slate-600">
-            <p className="text-lg font-medium text-slate-900 leading-relaxed">
-              Cadastre um usuário para liberar acesso às medições e obras.
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name Field */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-slate-700 uppercase tracking-wider">
+                Nome completo
+              </label>
+              <div className="relative group">
+                <User2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-slate-600" />
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="João Silva"
+                  className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5"
+                  autoComplete="name"
+                />
+              </div>
+            </div>
+
+            {/* Email Field */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-slate-700 uppercase tracking-wider">
+                E-mail corporativo
+              </label>
+              <div className="relative group">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-slate-600" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5"
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            {/* Role Field */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-slate-700 uppercase tracking-wider">
+                Perfil de acesso
+              </label>
+              <div className="relative group">
+                <Shield className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-slate-600 pointer-events-none z-10" />
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5 appearance-none cursor-pointer"
+                >
+                  {roles.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label} • {r.description}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Password Fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-700 uppercase tracking-wider">
+                  Senha
+                </label>
+                <div className="relative group">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-slate-600" />
+                  <input
+                    type="password"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    placeholder="••••••"
+                    className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5"
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-700 uppercase tracking-wider">
+                  Confirmar
+                </label>
+                <div className="relative group">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-slate-600" />
+                  <input
+                    type="password"
+                    value={confirmacao}
+                    onChange={(e) => setConfirmacao(e.target.value)}
+                    placeholder="••••••"
+                    className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all focus:border-slate-400 focus:ring-4 focus:ring-slate-900/5"
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 flex items-start gap-2">
+                <div className="w-1 h-1 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white py-3 text-sm font-semibold transition-all hover:bg-slate-800 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-900 shadow-lg shadow-slate-900/10"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Criando conta...</span>
+                </>
+              ) : (
+                <>
+                  <span>Criar conta</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Footer Links */}
+          <div className="mt-6 pt-6 border-t border-slate-100">
+            <p className="text-center text-xs text-slate-500">
+              Já tem conta?{" "}
+              <Link
+                href="/login"
+                className="text-slate-900 font-semibold hover:underline"
+              >
+                Fazer login
+              </Link>
             </p>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-slate-400" />
-              <div>
-                <p className="font-semibold text-slate-800 mb-1">
-                  Perfis disponíveis
-                </p>
-                <p>
-                  Gerentes têm visão total, instaladores focam no campo e
-                  produção acompanha status internos.
-                </p>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 flex items-start gap-3">
-              <BadgeCheck className="w-5 h-5 text-emerald-500" />
-              <div>
-                <p className="font-semibold text-slate-800 mb-1">
-                  Aprovação interna
-                </p>
-                <p>
-                  Só cadastre usuários autorizados. O sistema envia cookie de
-                  sessão automaticamente após o registro.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col gap-6"
-        >
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">
-              Criar nova conta
-            </h2>
-            <p className="text-sm text-slate-500">
-              Os campos marcados com * são obrigatórios.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Nome completo *
-            </label>
-            <div className="relative">
-              <User2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex: Maria da Silva"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              E-mail corporativo *
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="voce@empresa.com"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                autoComplete="email"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Perfil de acesso
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-            >
-              {roles.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Senha *
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                  autoComplete="new-password"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Confirmar senha *
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  value={confirmacao}
-                  onChange={(e) => setConfirmacao(e.target.value)}
-                  placeholder="Repita a senha"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                  autoComplete="new-password"
-                />
-              </div>
-            </div>
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white py-3 text-sm font-semibold transition hover:bg-slate-800 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Registrando...
-              </>
-            ) : (
-              "Registrar"
-            )}
-          </button>
-
-          <p className="text-xs text-slate-500 text-center">
-            Já tem conta?{" "}
-            <Link href="/login" className="text-slate-900 font-semibold">
-              faça login
-            </Link>
-            .
-          </p>
-        </form>
+        {/* Bottom Info */}
+        <p className="text-center text-xs text-slate-400 mt-6">
+          Cadastre apenas usuários autorizados
+        </p>
       </div>
     </div>
   );

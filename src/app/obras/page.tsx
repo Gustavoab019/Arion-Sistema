@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ObrasHeader } from "./components/ObrasHeader";
+import { AppLayout } from "../components/AppLayout";
 import { ObraSidebar } from "./components/ObraSidebar";
 import { ObraDetails } from "./components/ObraDetails";
 import { ObraFormModal } from "./components/ObraFormModal";
@@ -40,7 +40,6 @@ export default function ObrasPage() {
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<"todos" | ObraStatus>("todos");
 
-  const [obraAtivaId, setObraAtivaId] = useState<string | null>(null);
   const [selectedObraId, setSelectedObraId] = useState<string | null>(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -274,7 +273,6 @@ export default function ObrasPage() {
   };
 
   const handleSetObraAtiva = (obraId: string) => {
-    setObraAtivaId(obraId);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(ACTIVE_OBRA_KEY, obraId);
       window.location.href = "/medicoes";
@@ -315,7 +313,6 @@ export default function ObrasPage() {
     if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem(ACTIVE_OBRA_KEY);
       if (stored) {
-        setObraAtivaId(stored);
         setSelectedObraId(stored);
       }
     }
@@ -340,14 +337,8 @@ export default function ObrasPage() {
   }, [selectedObra, fetchAmbientes]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <ObrasHeader
-        total={filteredObras.length}
-        onNewObra={() => setShowCreateModal(true)}
-        canManage={canManage}
-      />
-
-      <main className="flex h-[calc(100vh-81px)]">
+    <AppLayout onNewObra={() => setShowCreateModal(true)}>
+      <div className="flex flex-col lg:flex-row">
         <ObraSidebar
           busca={busca}
           onBuscaChange={setBusca}
@@ -357,7 +348,6 @@ export default function ObrasPage() {
           obras={filteredObras}
           loading={loading}
           errorMessage={errorMessage}
-          obraAtivaId={obraAtivaId}
           selectedObraId={selectedObraId}
           onSelectObra={setSelectedObraId}
           getStatusColor={getStatusColor}
@@ -384,7 +374,7 @@ export default function ObrasPage() {
           onIrParaMedicoes={handleSetObraAtiva}
           canManage={canManage}
         />
-      </main>
+      </div>
 
       {canManage && (
         <>
@@ -425,6 +415,6 @@ export default function ObrasPage() {
           />
         </>
       )}
-    </div>
+    </AppLayout>
   );
 }

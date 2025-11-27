@@ -1,0 +1,438 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2024-11-09T00:00:00.000Z",
+  "__export_source": "codex-cli:insomnia-generator",
+  "resources": [
+    {
+      "_id": "wrk_sistema_cortinados",
+      "_type": "workspace",
+      "name": "Sistema Cortinados API",
+      "description": "Coleção para validar autenticação, obras e fluxo de ambientes.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_sistema_base",
+      "_type": "environment",
+      "parentId": "wrk_sistema_cortinados",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:3000",
+        "gerente": {
+          "nome": "Gerente QA",
+          "email": "gerente.qa@example.com",
+          "senha": "Senha@123"
+        },
+        "instalador": {
+          "nome": "Instalador QA",
+          "email": "instalador.qa@example.com",
+          "senha": "Senha@123"
+        },
+        "producao": {
+          "nome": "Producao QA",
+          "email": "producao.qa@example.com",
+          "senha": "Senha@123"
+        },
+        "gerenteUserId": "PASTE_GERENTE_USER_ID",
+        "instaladorUserId": "PASTE_INSTALADOR_USER_ID",
+        "producaoUserId": "PASTE_PRODUCAO_USER_ID",
+        "obraId": "PASTE_OBRA_ID",
+        "ambienteId": "PASTE_AMBIENTE_ID"
+      }
+    },
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_sistema_cortinados",
+      "name": "Auth",
+      "description": "Fluxo completo de cadastro, login e sessão."
+    },
+    {
+      "_id": "req_reg_gerente",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Register - Gerente",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"{{ _.gerente.nome }}\",\n  \"email\": \"{{ _.gerente.email }}\",\n  \"senha\": \"{{ _.gerente.senha }}\",\n  \"role\": \"gerente\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_reg_instalador",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Register - Instalador",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"{{ _.instalador.nome }}\",\n  \"email\": \"{{ _.instalador.email }}\",\n  \"senha\": \"{{ _.instalador.senha }}\",\n  \"role\": \"instalador\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_reg_producao",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Register - Produção",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"{{ _.producao.nome }}\",\n  \"email\": \"{{ _.producao.email }}\",\n  \"senha\": \"{{ _.producao.senha }}\",\n  \"role\": \"producao\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_login_gerente",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Login - Gerente",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.gerente.email }}\",\n  \"senha\": \"{{ _.gerente.senha }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_login_instalador",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Login - Instalador",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.instalador.email }}\",\n  \"senha\": \"{{ _.instalador.senha }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_login_producao",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Login - Produção",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.producao.email }}\",\n  \"senha\": \"{{ _.producao.senha }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_auth_me",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Auth - Current User",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/me"
+    },
+    {
+      "_id": "req_logout",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Logout",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/logout"
+    },
+    {
+      "_id": "fld_users",
+      "_type": "request_group",
+      "parentId": "wrk_sistema_cortinados",
+      "name": "Users",
+      "description": "Listagem de usuários ativos (somente gerente)."
+    },
+    {
+      "_id": "req_users_all",
+      "_type": "request",
+      "parentId": "fld_users",
+      "name": "Users - List All",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users"
+    },
+    {
+      "_id": "req_users_filter",
+      "_type": "request",
+      "parentId": "fld_users",
+      "name": "Users - Filter by Role",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/users?role=instalador&role=producao"
+    },
+    {
+      "_id": "fld_obras",
+      "_type": "request_group",
+      "parentId": "wrk_sistema_cortinados",
+      "name": "Obras",
+      "description": "Operações gerais da coleção de obras."
+    },
+    {
+      "_id": "req_obras_list",
+      "_type": "request",
+      "parentId": "fld_obras",
+      "name": "Obras - List",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/obras"
+    },
+    {
+      "_id": "req_obras_create",
+      "_type": "request",
+      "parentId": "fld_obras",
+      "name": "Obras - Create (Gerente)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/obras",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Apartamento Referência\",\n  \"cliente\": \"Cliente Exemplo\",\n  \"endereco\": \"Rua QA, 123\",\n  \"andarInicial\": 1,\n  \"andarFinal\": 20,\n  \"observacoes\": \"Criada via Insomnia\",\n  \"responsavelIds\": [\"{{ _.instaladorUserId }}\", \"{{ _.producaoUserId }}\"]\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "fld_obra_item",
+      "_type": "request_group",
+      "parentId": "wrk_sistema_cortinados",
+      "name": "Obra - Item",
+      "description": "Operações que usam {{ _.obraId }}."
+    },
+    {
+      "_id": "req_obra_get",
+      "_type": "request",
+      "parentId": "fld_obra_item",
+      "name": "Obra - Get by ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/obras/{{ _.obraId }}"
+    },
+    {
+      "_id": "req_obra_patch",
+      "_type": "request",
+      "parentId": "fld_obra_item",
+      "name": "Obra - Update (Gerente)",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/obras/{{ _.obraId }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cliente\": \"Cliente Atualizado\",\n  \"status\": \"ativo\",\n  \"observacoes\": \"Atualizada para testes\",\n  \"responsavelIds\": [\"{{ _.gerenteUserId }}\", \"{{ _.instaladorUserId }}\", \"{{ _.producaoUserId }}\"]\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_obra_delete",
+      "_type": "request",
+      "parentId": "fld_obra_item",
+      "name": "Obra - Delete (Gerente)",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/obras/{{ _.obraId }}"
+    },
+    {
+      "_id": "fld_ambientes",
+      "_type": "request_group",
+      "parentId": "wrk_sistema_cortinados",
+      "name": "Ambientes",
+      "description": "CRUD básico de ambientes."
+    },
+    {
+      "_id": "req_ambientes_list",
+      "_type": "request",
+      "parentId": "fld_ambientes",
+      "name": "Ambientes - List by Obra",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/ambientes?obraId={{ _.obraId }}"
+    },
+    {
+      "_id": "req_ambientes_create",
+      "_type": "request",
+      "parentId": "fld_ambientes",
+      "name": "Ambientes - Create (Medidor)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/ambientes",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"obraId\": \"{{ _.obraId }}\",\n  \"quarto\": \"Suíte Master\",\n  \"prefixo\": \"SM\",\n  \"medidas\": {\n    \"largura\": 3.45,\n    \"altura\": 2.80,\n    \"recuo\": 0.15,\n    \"instalacao\": \"teto\"\n  },\n  \"variaveis\": {\n    \"calha\": \"Calha Premium\",\n    \"tipoMontagem\": \"dupla_cruzada\",\n    \"tecidoPrincipal\": \"Linho\",\n    \"tecidoSecundario\": \"Blackout\",\n    \"regras\": {\n      \"calhaDesconto\": 0.02,\n      \"voileAlturaDesconto\": 0.05,\n      \"blackoutAlturaDesconto\": 0.07\n    }\n  },\n  \"observacoes\": \"Ambiente criado via Insomnia\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_ambiente_get",
+      "_type": "request",
+      "parentId": "fld_ambientes",
+      "name": "Ambiente - Get by ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/ambientes/{{ _.ambienteId }}"
+    },
+    {
+      "_id": "req_ambiente_patch",
+      "_type": "request",
+      "parentId": "fld_ambientes",
+      "name": "Ambiente - Update Dados Gerais",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/ambientes/{{ _.ambienteId }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"medidas\": {\n    \"largura\": 3.50,\n    \"altura\": 2.90,\n    \"instalacao\": \"parede\"\n  },\n  \"variaveis\": {\n    \"calha\": \"Calha Revisada\",\n    \"tipoMontagem\": \"tripla\",\n    \"tecidoPrincipal\": \"Voil\",\n    \"tecidoSecundario\": \"Blackout\",\n    \"regras\": {\n      \"calhaDesconto\": 0.01,\n      \"voileAlturaDesconto\": 0.03,\n      \"blackoutAlturaDesconto\": 0.05,\n      \"alturaInstalacaoOffset\": 0.02\n    }\n  },\n  \"observacoes\": \"Revisão pós-medição\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_ambiente_delete",
+      "_type": "request",
+      "parentId": "fld_ambientes",
+      "name": "Ambiente - Delete",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/ambientes/{{ _.ambienteId }}"
+    },
+    {
+      "_id": "fld_workflow",
+      "_type": "request_group",
+      "parentId": "wrk_sistema_cortinados",
+      "name": "Ambiente - Workflow",
+      "description": "Ações por etapa do pipeline."
+    },
+    {
+      "_id": "req_ambiente_send_validation",
+      "_type": "request",
+      "parentId": "fld_workflow",
+      "name": "Workflow - Enviar p/ Validação",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/ambientes/{{ _.ambienteId }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"aguardando_validacao\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Executar logado como instalador/medidor para mover de medicao_pendente."
+    },
+    {
+      "_id": "req_ambiente_approve_production",
+      "_type": "request",
+      "parentId": "fld_workflow",
+      "name": "Workflow - Validar & Enviar p/ Produção",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/ambientes/{{ _.ambienteId }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"em_producao\",\n  \"validadoPor\": \"{{ _.gerenteUserId }}\",\n  \"validadoEm\": \"2024-11-09T12:00:00.000Z\",\n  \"producaoCortinaResponsavel\": \"{{ _.producaoUserId }}\",\n  \"producaoCalhaResponsavel\": \"{{ _.producaoUserId }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Executar logado como gerente."
+    },
+    {
+      "_id": "req_ambiente_finish_production",
+      "_type": "request",
+      "parentId": "fld_workflow",
+      "name": "Workflow - Produção Finalizada",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/ambientes/{{ _.ambienteId }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"aguardando_instalacao\",\n  \"producaoConcluidaEm\": \"2024-11-09T15:00:00.000Z\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Executar logado como usuário de Produção."
+    },
+    {
+      "_id": "req_ambiente_mark_installed",
+      "_type": "request",
+      "parentId": "fld_workflow",
+      "name": "Workflow - Marcar como Instalado",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/ambientes/{{ _.ambienteId }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"instalado\",\n  \"instaladoPor\": \"{{ _.instaladorUserId }}\",\n  \"instaladoEm\": \"2024-11-09T18:00:00.000Z\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Executar logado como instalador responsável."
+    },
+    {
+      "_id": "fld_misc",
+      "_type": "request_group",
+      "parentId": "wrk_sistema_cortinados",
+      "name": "Manutenção",
+      "description": "Ferramentas auxiliares."
+    },
+    {
+      "_id": "req_migrate",
+      "_type": "request",
+      "parentId": "fld_misc",
+      "name": "Ambientes - Migração Tipo Montagem",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/ambientes/migrate",
+      "description": "Executar apenas uma vez para preencher tipoMontagem nos ambientes existentes."
+    }
+  ]
+}

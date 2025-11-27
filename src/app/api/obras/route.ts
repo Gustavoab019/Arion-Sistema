@@ -4,6 +4,7 @@ import { connectDB } from "@/src/lib/db";
 import Obra from "@/src/lib/models/Obra";
 import User from "@/src/lib/models/User";
 import { getCurrentUser } from "@/src/lib/getCurrentUser";
+import { notifyObraResponsaveis } from "@/src/lib/notifications";
 import mongoose from "mongoose";
 
 async function montarResponsaveis(responsavelIds?: unknown) {
@@ -90,6 +91,14 @@ export async function POST(req: Request) {
     observacoes: body.observacoes,
     responsaveis,
   });
+
+  // Notificar responsáveis adicionados
+  if (responsaveis.length > 0) {
+    const responsavelIds = responsaveis.map((r) =>
+      new mongoose.Types.ObjectId(r.userId as string)
+    );
+    await notifyObraResponsaveis(nova.toObject(), responsavelIds);
+  }
 
   return NextResponse.json(nova, { status: 201 });
 }

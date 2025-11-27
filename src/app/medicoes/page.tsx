@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { PanelRightOpen } from "lucide-react";
 import { MedicoesHeader } from "./components/MedicoesHeader";
 import { MedicoesForm } from "./components/MedicoesForm";
 import { MedicoesSidebar } from "./components/MedicoesSidebar";
-import { Ambiente, Obra } from "./types";
+import type { Ambiente, Obra, AmbienteStatus } from "./types";
 import { ACTIVE_OBRA_KEY } from "@/src/lib/constants";
 import { parseJsonOrThrow } from "@/src/lib/http";
+import { AppLayout } from "@/src/app/components/AppLayout";
+import { useToast } from "@/src/app/components/Toast";
 
 const FORM_DEFAULTS = {
   prefixo: "QT",
@@ -16,15 +19,22 @@ const FORM_DEFAULTS = {
   recuo: "",
   instalacao: "teto",
   observacoes: "",
-  calha: "Forest preta",
-  calhaDesconto: "-1.5",
-  tecidoPrincipal: "Voile branco",
-  tecidoPrincipalDesc: "0",
-  tecidoSecundario: "Blackout cinza",
-  tecidoSecundarioDesc: "-2",
 };
 
+const STATUS_FLOW: AmbienteStatus[] = [
+  "medicao_pendente",
+  "aguardando_validacao",
+  "em_producao",
+  "producao_calha",
+  "producao_cortina",
+  "estoque_deposito",
+  "em_transito",
+  "aguardando_instalacao",
+  "instalado",
+];
+
 export default function MedicoesPage() {
+  const { showToast, ToastContainer } = useToast();
   const [obras, setObras] = useState<Obra[]>([]);
   const [obraId, setObraId] = useState("");
   const [andar, setAndar] = useState("1");
@@ -39,21 +49,6 @@ export default function MedicoesPage() {
   const [instalacao, setInstalacao] = useState(FORM_DEFAULTS.instalacao);
   const [observacoes, setObservacoes] = useState(FORM_DEFAULTS.observacoes);
 
-  const [calha, setCalha] = useState(FORM_DEFAULTS.calha);
-  const [calhaDesconto, setCalhaDesconto] = useState(FORM_DEFAULTS.calhaDesconto);
-  const [tecidoPrincipal, setTecidoPrincipal] = useState(
-    FORM_DEFAULTS.tecidoPrincipal
-  );
-  const [tecidoPrincipalDesc, setTecidoPrincipalDesc] = useState(
-    FORM_DEFAULTS.tecidoPrincipalDesc
-  );
-  const [tecidoSecundario, setTecidoSecundario] = useState(
-    FORM_DEFAULTS.tecidoSecundario
-  );
-  const [tecidoSecundarioDesc, setTecidoSecundarioDesc] = useState(
-    FORM_DEFAULTS.tecidoSecundarioDesc
-  );
-
   // list
   const [ambientes, setAmbientes] = useState<Ambiente[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,19 +57,69 @@ export default function MedicoesPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [finalizandoMedicao, setFinalizandoMedicao] = useState(false);
 
   const codigoPreview = `${prefixo}${quarto}-${sequencia}`;
-  const stats = useMemo(() => {
-    return ambientes.reduce(
-      (acc, amb) => {
-        if (amb.status === "completo") acc.done += 1;
-        else if (amb.status === "revisar") acc.review += 1;
-        else acc.pending += 1;
+  const obraSelecionada = useMemo(
+    () => obras.find((obra) => obra._id === obraId) ?? null,
+    [obras, obraId]
+  );
+
+  const ambienteSelecionado = useMemo(
+    () => ambientes.find((amb) => amb._id === selectedId) ?? null,
+    [ambientes, selectedId]
+  );
+
+  type StatusSummary = Record<AmbienteStatus, number>;
+
+  const stats = useMemo<StatusSummary>(() => {
+    const createSummaryBase = (): StatusSummary =>
+      STATUS_FLOW.reduce((acc, status) => {
+        acc[status] = 0;
         return acc;
-      },
-      { pending: 0, review: 0, done: 0 }
-    );
+      }, {} as StatusSummary);
+
+    return ambientes.reduce((acc, amb) => {
+      const status = (amb.status ?? "medicao_pendente") as AmbienteStatus;
+      acc[status] = (acc[status] ?? 0) + 1;
+      return acc;
+    }, createSummaryBase());
   }, [ambientes]);
+
+  const handleFinalizarMedicao = useCallback(async () => {
+    if (!ambienteSelecionado) return;
+    console.log("🚀 Finalizando medição para:", ambienteSelecionado.codigo);
+    console.log("📝 Status atual:", ambienteSelecionado.status);
+
+    setFinalizandoMedicao(true);
+    try {
+      const res = await fetch(`/api/ambientes/${ambienteSelecionado._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: "aguardando_validacao" }),
+      });
+      const atualizado = await parseJsonOrThrow<Ambiente>(res);
+
+      console.log("✅ Medição finalizada!");
+      console.log("📝 Novo status:", atualizado.status);
+      console.log("📦 Ambiente atualizado:", atualizado);
+
+      setAmbientes((prev) =>
+        prev.map((amb) => (amb._id === atualizado._id ? atualizado : amb))
+      );
+      showToast("success", "Medição enviada para validação do gerente.");
+    } catch (error) {
+      console.error("❌ Erro ao finalizar medição:", error);
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Erro ao finalizar medição."
+      );
+    } finally {
+      setFinalizandoMedicao(false);
+    }
+  }, [ambienteSelecionado, showToast]);
 
   // carregar obras
   useEffect(() => {
@@ -153,30 +198,6 @@ export default function MedicoesPage() {
     );
     setInstalacao(amb.medidas?.instalacao || FORM_DEFAULTS.instalacao);
     setObservacoes(amb.observacoes || FORM_DEFAULTS.observacoes);
-
-    setCalha(amb.variaveis?.calha || FORM_DEFAULTS.calha);
-    setTecidoPrincipal(
-      amb.variaveis?.tecidoPrincipal || FORM_DEFAULTS.tecidoPrincipal
-    );
-    setTecidoSecundario(
-      amb.variaveis?.tecidoSecundario || FORM_DEFAULTS.tecidoSecundario
-    );
-
-    setCalhaDesconto(
-      amb.variaveis?.regras?.calhaDesconto !== undefined
-        ? String(amb.variaveis.regras.calhaDesconto)
-        : FORM_DEFAULTS.calhaDesconto
-    );
-    setTecidoPrincipalDesc(
-      amb.variaveis?.regras?.voileAlturaDesconto !== undefined
-        ? String(amb.variaveis.regras.voileAlturaDesconto)
-        : FORM_DEFAULTS.tecidoPrincipalDesc
-    );
-    setTecidoSecundarioDesc(
-      amb.variaveis?.regras?.blackoutAlturaDesconto !== undefined
-        ? String(amb.variaveis.regras.blackoutAlturaDesconto)
-        : FORM_DEFAULTS.tecidoSecundarioDesc
-    );
   }
 
   function resetForm() {
@@ -188,18 +209,12 @@ export default function MedicoesPage() {
     setRecuo(FORM_DEFAULTS.recuo);
     setInstalacao(FORM_DEFAULTS.instalacao);
     setObservacoes(FORM_DEFAULTS.observacoes);
-    setCalha(FORM_DEFAULTS.calha);
-    setCalhaDesconto(FORM_DEFAULTS.calhaDesconto);
-    setTecidoPrincipal(FORM_DEFAULTS.tecidoPrincipal);
-    setTecidoPrincipalDesc(FORM_DEFAULTS.tecidoPrincipalDesc);
-    setTecidoSecundario(FORM_DEFAULTS.tecidoSecundario);
-    setTecidoSecundarioDesc(FORM_DEFAULTS.tecidoSecundarioDesc);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!obraId) {
-      alert("Selecione uma obra primeiro.");
+      showToast("Selecione uma obra primeiro.", "error");
       return;
     }
 
@@ -217,22 +232,7 @@ export default function MedicoesPage() {
         recuo: recuo ? Number(recuo) : undefined,
         instalacao,
       },
-      variaveis: {
-        calha,
-        tecidoPrincipal,
-        tecidoSecundario,
-        regras: {
-          calhaDesconto: calhaDesconto ? Number(calhaDesconto) : undefined,
-          voileAlturaDesconto: tecidoPrincipalDesc
-            ? Number(tecidoPrincipalDesc)
-            : undefined,
-          blackoutAlturaDesconto: tecidoSecundarioDesc
-            ? Number(tecidoSecundarioDesc)
-            : undefined,
-        },
-      },
       observacoes,
-      status: "pendente" as const,
     };
 
     try {
@@ -249,6 +249,7 @@ export default function MedicoesPage() {
         );
         setSaved(true);
         setTimeout(() => setSaved(false), 1500);
+        showToast(`Ambiente ${atualizado.codigo} atualizado com sucesso!`, "success");
       } else {
         const res = await fetch("/api/ambientes", {
           method: "POST",
@@ -267,36 +268,21 @@ export default function MedicoesPage() {
 
         setSaved(true);
         setTimeout(() => setSaved(false), 1500);
+        showToast(`Medição ${novo.codigo} adicionada com sucesso!`, "success");
       }
     } catch (err) {
       console.error("Erro ao salvar ambiente:", err);
-      alert(err instanceof Error ? err.message : "Erro ao salvar ambiente.");
+      showToast(err instanceof Error ? err.message : "Erro ao salvar ambiente.", "error");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleChangeStatus(id: string, status: Ambiente["status"]) {
-    try {
-      const res = await fetch(`/api/ambientes/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status }),
-      });
-      const atualizado = await parseJsonOrThrow<Ambiente>(res);
-      setAmbientes((prev) =>
-        prev.map((a) => (a._id === atualizado._id ? atualizado : a))
-      );
-    } catch (err) {
-      console.error("Erro ao atualizar status:", err);
-      alert(err instanceof Error ? err.message : "Erro ao atualizar status.");
     }
   }
 
   async function handleDelete(id: string) {
     const confirmDelete = window.confirm("Deseja realmente excluir esse ambiente?");
     if (!confirmDelete) return;
+
+    const ambienteParaExcluir = ambientes.find((a) => a._id === id);
 
     try {
       const res = await fetch(`/api/ambientes/${id}`, {
@@ -311,9 +297,10 @@ export default function MedicoesPage() {
       if (selectedId === id) {
         resetForm();
       }
+      showToast(`Ambiente ${ambienteParaExcluir?.codigo || ""} excluído.`, "info");
     } catch (err) {
       console.error("Erro ao excluir ambiente:", err);
-      alert(err instanceof Error ? err.message : "Erro ao excluir ambiente.");
+      showToast(err instanceof Error ? err.message : "Erro ao excluir ambiente.", "error");
     }
   }
 
@@ -330,10 +317,13 @@ export default function MedicoesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <AppLayout>
+      <ToastContainer />
+
       <MedicoesHeader
         obras={obras}
         obraId={obraId}
+        obraSelecionada={obraSelecionada}
         onChangeObra={(id) => {
           setObraId(id);
           setSelectedId(null);
@@ -353,9 +343,14 @@ export default function MedicoesPage() {
         loadingAmbientes={loading}
       />
 
-      <main className="max-w-6xl mx-auto px-4 py-6 grid gap-6 lg:grid-cols-[1fr,360px]">
+      <main
+        className={`max-w-6xl mx-auto px-4 py-6 grid gap-6 ${
+          sidebarOpen ? "lg:grid-cols-[1fr,360px]" : "lg:grid-cols-1"
+        }`}
+      >
         <MedicoesForm
           selectedId={selectedId}
+          selectedAmbiente={ambienteSelecionado}
           prefixo={prefixo}
           onChangePrefixo={setPrefixo}
           sequencia={sequencia}
@@ -368,38 +363,75 @@ export default function MedicoesPage() {
           onChangeRecuo={setRecuo}
           instalacao={instalacao}
           onChangeInstalacao={setInstalacao}
-          calha={calha}
-          onChangeCalha={setCalha}
-          calhaDesconto={calhaDesconto}
-          onChangeCalhaDesconto={setCalhaDesconto}
-          tecidoPrincipal={tecidoPrincipal}
-          onChangeTecidoPrincipal={setTecidoPrincipal}
-          tecidoPrincipalDesc={tecidoPrincipalDesc}
-          onChangeTecidoPrincipalDesc={setTecidoPrincipalDesc}
-          tecidoSecundario={tecidoSecundario}
-          onChangeTecidoSecundario={setTecidoSecundario}
-          tecidoSecundarioDesc={tecidoSecundarioDesc}
-          onChangeTecidoSecundarioDesc={setTecidoSecundarioDesc}
           observacoes={observacoes}
           onChangeObservacoes={setObservacoes}
           onSubmit={handleSubmit}
           onResetEdit={resetForm}
           saving={saving}
           saved={saved}
+          onFinalizeMedicao={
+            ambienteSelecionado?.status === "medicao_pendente"
+              ? handleFinalizarMedicao
+              : undefined
+          }
+          finalizandoMedicao={finalizandoMedicao}
         />
 
-        <MedicoesSidebar
-          loading={loading}
-          quarto={quarto}
-          searchTerm={searchTerm}
-          onChangeSearch={setSearchTerm}
-          ambientes={ambientes}
-          selectedId={selectedId}
-          onSelect={fillFormFromAmbiente}
-          onDelete={handleDelete}
-          onChangeStatus={handleChangeStatus}
-        />
+        {sidebarOpen && (
+          <MedicoesSidebar
+            loading={loading}
+            quarto={quarto}
+            searchTerm={searchTerm}
+            onChangeSearch={setSearchTerm}
+            ambientes={ambientes}
+            selectedId={selectedId}
+            onSelect={fillFormFromAmbiente}
+            onDelete={handleDelete}
+            onClose={() => setSidebarOpen(false)}
+            onFinalizarMedicao={async (id) => {
+              const ambiente = ambientes.find((amb) => amb._id === id);
+              if (!ambiente) return;
+
+              console.log("🚀 Finalizando medição (sidebar) para:", ambiente.codigo);
+              console.log("📝 Status atual:", ambiente.status);
+
+              try {
+                const res = await fetch(`/api/ambientes/${id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ status: "aguardando_validacao" }),
+                });
+                const atualizado = await parseJsonOrThrow<Ambiente>(res);
+
+                console.log("✅ Medição finalizada (sidebar)!");
+                console.log("📝 Novo status:", atualizado.status);
+
+                setAmbientes((prev) =>
+                  prev.map((amb) => (amb._id === atualizado._id ? atualizado : amb))
+                );
+                showToast("Medição enviada para validação do gerente.", "success");
+              } catch (error) {
+                console.error("❌ Erro ao finalizar medição:", error);
+                showToast(
+                  error instanceof Error ? error.message : "Erro ao finalizar medição.",
+                  "error"
+                );
+              }
+            }}
+          />
+        )}
       </main>
-    </div>
+
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed bottom-6 right-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-sm font-semibold shadow-lg shadow-slate-900/20 hover:bg-slate-800"
+        >
+          <PanelRightOpen className="w-4 h-4" />
+          Abrir lista
+        </button>
+      )}
+    </AppLayout>
   );
 }

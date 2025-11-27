@@ -57,11 +57,13 @@ export function ObraDetails({
 }: ObraDetailsProps) {
   if (!obra) {
     return (
-      <section className="flex-1 overflow-y-auto">
-        <div className="flex flex-col items-center justify-center h-full text-slate-400">
-          <Users className="w-16 h-16 mb-4" />
-          <p className="text-lg font-medium">Selecione uma obra</p>
-          <p className="text-sm">Escolha uma obra para ver os detalhes</p>
+      <section className="flex-1 bg-gradient-to-br from-slate-50 to-slate-100 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
+        <div className="flex flex-col items-center justify-center min-h-[50vh] lg:h-full text-slate-400 p-6">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-white border-2 border-slate-200 flex items-center justify-center mb-4 shadow-xl">
+            <Users className="w-10 h-10 sm:w-12 sm:h-12 text-slate-300" />
+          </div>
+          <p className="text-lg font-bold text-slate-700">Selecione uma obra</p>
+          <p className="text-sm text-slate-500 mt-1">Escolha um projeto ao lado para ver os detalhes</p>
         </div>
       </section>
     );
@@ -72,17 +74,17 @@ export function ObraDetails({
   const podeEditarEquipe = canManage && Boolean(onToggleResponsavel) && Boolean(onSalvarEquipe);
 
   return (
-    <section className="flex-1 overflow-y-auto">
-      <div className="p-6 space-y-6">
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <div className="flex items-start justify-between mb-4">
+    <section className="flex-1 bg-gradient-to-br from-slate-50 to-slate-100 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-7 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-3 mb-4">
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-slate-900 mb-1">{obra.nome}</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">{obra.nome}</h2>
               {obra.cliente && <p className="text-sm text-slate-600">{obra.cliente}</p>}
             </div>
 
             {canManage && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-end sm:self-auto">
                 <button
                   onClick={() => onEdit(obra)}
                   className="p-2 hover:bg-slate-100 rounded-lg transition"
@@ -99,7 +101,7 @@ export function ObraDetails({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {obra.endereco && (
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
@@ -163,11 +165,11 @@ export function ObraDetails({
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-7 shadow-sm space-y-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-slate-700" />
-              <h3 className="text-lg font-bold text-slate-900">Equipe Designada</h3>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900">Equipe Designada</h3>
             </div>
           </div>
 
@@ -184,7 +186,7 @@ export function ObraDetails({
                   Nenhum usuário ativo encontrado
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {usuarios.map((usuario) => {
                     const isSelected = responsavelIds.includes(usuario._id);
                     return (
@@ -254,25 +256,25 @@ export function ObraDetails({
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-7 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <ClipboardList className="w-5 h-5 text-slate-700" />
-            <h3 className="text-lg font-bold text-slate-900">Resumo das Medições</h3>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900">Resumo das Medições</h3>
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 rounded-lg border border-slate-200">
-                <p className="text-xs text-slate-500 mb-1 uppercase">Pendentes</p>
-                <p className="text-2xl font-bold text-slate-900">{ambienteStats.pending}</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="text-center p-3 sm:p-4 rounded-lg border border-slate-200">
+                <p className="text-[0.65rem] sm:text-xs text-slate-500 mb-1 uppercase">Pendentes</p>
+                <p className="text-xl sm:text-2xl font-bold text-slate-900">{ambienteStats.pending}</p>
               </div>
-              <div className="text-center p-4 rounded-lg border border-amber-200 bg-amber-50">
-                <p className="text-xs text-amber-700 mb-1 uppercase">Revisar</p>
-                <p className="text-2xl font-bold text-amber-700">{ambienteStats.review}</p>
+              <div className="text-center p-3 sm:p-4 rounded-lg border border-amber-200 bg-amber-50">
+                <p className="text-[0.65rem] sm:text-xs text-amber-700 mb-1 uppercase">Revisar</p>
+                <p className="text-xl sm:text-2xl font-bold text-amber-700">{ambienteStats.review}</p>
               </div>
-              <div className="text-center p-4 rounded-lg border border-emerald-200 bg-emerald-50">
-                <p className="text-xs text-emerald-700 mb-1 uppercase">Completas</p>
-                <p className="text-2xl font-bold text-emerald-700">{ambienteStats.done}</p>
+              <div className="text-center p-3 sm:p-4 rounded-lg border border-emerald-200 bg-emerald-50">
+                <p className="text-[0.65rem] sm:text-xs text-emerald-700 mb-1 uppercase">Completas</p>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-700">{ambienteStats.done}</p>
               </div>
             </div>
 

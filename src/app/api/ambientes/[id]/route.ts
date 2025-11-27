@@ -5,6 +5,8 @@ import Ambiente, { IAmbiente } from "@/src/lib/models/Ambiente";
 import { getCurrentUser } from "@/src/lib/getCurrentUser";
 import Obra from "@/src/lib/models/Obra";
 import mongoose from "mongoose";
+import { dispatchNotificationsForStatus } from "@/src/lib/notifications";
+import { validateStatusTransition, type AmbienteStatus as ValidatedStatus } from "@/src/lib/statusValidation";
 
 // mesmos tipos da outra rota
 type MedidasInput = {
@@ -23,10 +25,30 @@ type VariaveisRegrasInput = {
 
 type VariaveisInput = {
   calha?: string;
+  tipoMontagem?:
+    | "simples"
+    | "dupla_paralela"
+    | "dupla_cruzada"
+    | "tripla"
+    | "painel_fixo_movel"
+    | "sistema_quadruplo"
+    | "motorizada_ondas"
+    | "sistema_misto";
   tecidoPrincipal?: string;
   tecidoSecundario?: string;
   regras?: VariaveisRegrasInput;
 };
+
+type AmbienteStatus =
+  | "medicao_pendente"
+  | "aguardando_validacao"
+  | "em_producao"
+  | "producao_calha"
+  | "producao_cortina"
+  | "estoque_deposito"
+  | "em_transito"
+  | "aguardando_instalacao"
+  | "instalado";
 
 type AmbienteInput = {
   obraId?: string;
@@ -38,7 +60,30 @@ type AmbienteInput = {
   medidas?: MedidasInput;
   variaveis?: VariaveisInput;
   observacoes?: string;
-  status?: "pendente" | "revisar" | "completo";
+  status?: AmbienteStatus;
+  producaoCortinaResponsavel?: string;
+  producaoCalhaResponsavel?: string;
+  instaladorResponsavel?: string;
+  depositoPalete?: string;
+  depositoLocal?: string;
+  depositoRecebidoPor?: string;
+  depositoRecebidoEm?: Date | string;
+  expedicaoRomaneio?: string;
+  expedicaoRetiradoPor?: string;
+  expedicaoRetiradoEm?: Date | string;
+};
+
+type WorkflowState = {
+  validadoEm?: Date;
+  producaoCalhaInicio?: Date;
+  producaoCalhaFim?: Date;
+  producaoCortinaInicio?: Date;
+  producaoCortinaFim?: Date;
+  depositoEntrada?: Date;
+  depositoSaida?: Date;
+  expedicaoSaida?: Date;
+  instalacaoInicio?: Date;
+  instalacaoFim?: Date;
 };
 
 function montarCalculado(data: AmbienteInput) {
@@ -68,7 +113,111 @@ function montarCalculado(data: AmbienteInput) {
   };
 }
 
-async function usuarioPodeAcessarObra(user: { _id: string; role: string }, obraId?: mongoose.Types.ObjectId | null) {
+function updateWorkflowForTransition(
+  workflow: WorkflowState | undefined,
+  previousStatus: AmbienteStatus | null,
+  nextStatus: AmbienteStatus,
+  timestamp: Date
+) {
+  const nextWorkflow: WorkflowState = { ...(workflow ?? {}) };
+  const ensure = (key: keyof WorkflowState) => {
+    if (!nextWorkflow[key]) {
+      nextWorkflow[key] = timestamp;
+    }
+  };
+
+  if (previousStatus === "producao_calha" && nextStatus !== "producao_calha") {
+    if (!nextWorkflow.producaoCalhaFim) {
+      nextWorkflow.producaoCalhaFim = timestamp;
+    }
+  }
+  if (previousStatus === "producao_cortina" && nextStatus !== "producao_cortina") {
+    if (!nextWorkflow.producaoCortinaFim) {
+      nextWorkflow.producaoCortinaFim = timestamp;
+    }
+  }
+
+  switch (nextStatus) {
+    case "aguardando_validacao":
+      ensure("validadoEm");
+      break;
+    case "em_producao":
+    case "producao_calha":
+      ensure("producaoCalhaInicio");
+      break;
+    case "producao_cortina":
+      ensure("producaoCortinaInicio");
+      if (!nextWorkflow.producaoCalhaFim) {
+        nextWorkflow.producaoCalhaFim = timestamp;
+      }
+      break;
+    case "estoque_deposito":
+      ensure("depositoEntrada");
+      if (!nextWorkflow.producaoCalhaFim) {
+        nextWorkflow.producaoCalhaFim = timestamp;
+      }
+      if (!nextWorkflow.producaoCortinaFim) {
+        nextWorkflow.producaoCortinaFim = timestamp;
+      }
+      break;
+    case "em_transito":
+      ensure("depositoSaida");
+      ensure("expedicaoSaida");
+      if (!nextWorkflow.depositoEntrada) {
+        nextWorkflow.depositoEntrada = timestamp;
+      }
+      break;
+    case "aguardando_instalacao":
+      ensure("instalacaoInicio");
+      if (!nextWorkflow.depositoSaida) {
+        nextWorkflow.depositoSaida = timestamp;
+      }
+      if (!nextWorkflow.expedicaoSaida) {
+        nextWorkflow.expedicaoSaida = timestamp;
+      }
+      if (!nextWorkflow.producaoCalhaFim) {
+        nextWorkflow.producaoCalhaFim = timestamp;
+      }
+      if (!nextWorkflow.producaoCortinaFim) {
+        nextWorkflow.producaoCortinaFim = timestamp;
+      }
+      break;
+    case "instalado":
+      nextWorkflow.instalacaoFim = timestamp;
+      break;
+    default:
+      break;
+  }
+
+  return nextWorkflow;
+}
+
+function normalizeWorkflow(
+  input: IAmbiente["workflow"] | WorkflowState | undefined
+): WorkflowState {
+  if (!input) return {};
+  const maybeDoc = input as mongoose.Document & WorkflowState;
+  if (typeof maybeDoc.toObject === "function") {
+    return maybeDoc.toObject();
+  }
+  return input as WorkflowState;
+}
+
+function shouldAutoEnviarParaProducao(data: AmbienteInput): boolean {
+  const larguraValida =
+    typeof data.medidas?.largura === "number" && data.medidas.largura > 0;
+  const alturaValida =
+    typeof data.medidas?.altura === "number" && data.medidas.altura > 0;
+  const hasMedidas = larguraValida && alturaValida;
+  const hasCalha = Boolean(data.variaveis?.calha && data.variaveis?.tipoMontagem);
+  const hasTecidoPrincipal = Boolean(data.variaveis?.tecidoPrincipal);
+  return hasMedidas && hasCalha && hasTecidoPrincipal;
+}
+
+async function usuarioPodeAcessarObra(
+  user: { _id: string; role: string },
+  obraId?: mongoose.Types.ObjectId | null
+) {
   if (user.role === "gerente") return true;
   if (!obraId) return false;
 
@@ -164,16 +313,6 @@ export async function PATCH(
 
     console.log("✅ [PATCH] Ambiente encontrado:", atual.codigo);
 
-    // Se for apenas status (otimização)
-    if (patchData.status && Object.keys(patchData).length === 1) {
-      console.log("🔵 [PATCH] Atualizando apenas status:", patchData.status);
-      atual.status = patchData.status;
-      atual.updatedBy = new mongoose.Types.ObjectId(user._id);
-      await atual.save();
-      console.log("✅ [PATCH] Status atualizado com sucesso");
-      return NextResponse.json(atual);
-    }
-
     // Atualização completa
     const atualObj = atual.toObject() as IAmbiente;
 
@@ -191,13 +330,16 @@ export async function PATCH(
         instalacao:
           patchData.medidas?.instalacao ?? atualObj.medidas?.instalacao,
       },
-      variaveis: {
-        calha: patchData.variaveis?.calha ?? atualObj.variaveis?.calha,
-        tecidoPrincipal:
-          patchData.variaveis?.tecidoPrincipal ??
-          atualObj.variaveis?.tecidoPrincipal,
-        tecidoSecundario:
-          patchData.variaveis?.tecidoSecundario ??
+  variaveis: {
+    calha: patchData.variaveis?.calha ?? atualObj.variaveis?.calha,
+    tipoMontagem:
+      patchData.variaveis?.tipoMontagem ??
+      atualObj.variaveis?.tipoMontagem,
+    tecidoPrincipal:
+      patchData.variaveis?.tecidoPrincipal ??
+      atualObj.variaveis?.tecidoPrincipal,
+    tecidoSecundario:
+      patchData.variaveis?.tecidoSecundario ??
           atualObj.variaveis?.tecidoSecundario,
         regras: {
           calhaDesconto:
@@ -212,25 +354,129 @@ export async function PATCH(
           alturaInstalacaoOffset:
             patchData.variaveis?.regras?.alturaInstalacaoOffset ??
             atualObj.variaveis?.regras?.alturaInstalacaoOffset,
-        },
       },
-      observacoes: patchData.observacoes ?? atualObj.observacoes,
-      status: patchData.status ?? atualObj.status,
-    };
+    },
+    observacoes: patchData.observacoes ?? atualObj.observacoes,
+    status: patchData.status ?? atualObj.status,
+    depositoPalete: patchData.depositoPalete ?? atualObj.depositoPalete,
+    depositoLocal: patchData.depositoLocal ?? atualObj.depositoLocal,
+    depositoRecebidoPor:
+      patchData.depositoRecebidoPor ??
+      (atualObj.depositoRecebidoPor
+        ? atualObj.depositoRecebidoPor.toString()
+        : undefined),
+    depositoRecebidoEm:
+      patchData.depositoRecebidoEm ?? atualObj.depositoRecebidoEm,
+    expedicaoRomaneio:
+      patchData.expedicaoRomaneio ?? atualObj.expedicaoRomaneio,
+    expedicaoRetiradoPor:
+      patchData.expedicaoRetiradoPor ??
+      (atualObj.expedicaoRetiradoPor
+        ? atualObj.expedicaoRetiradoPor.toString()
+        : undefined),
+    expedicaoRetiradoEm:
+      patchData.expedicaoRetiradoEm ?? atualObj.expedicaoRetiradoEm,
+  };
 
     const calculado = montarCalculado(bodyCompleto);
 
+    const duplicateQuery: Record<string, unknown> = {
+      _id: { $ne: new mongoose.Types.ObjectId(params.id) },
+      codigo: bodyCompleto.codigo,
+    };
+    if (bodyCompleto.obraId) {
+      duplicateQuery.obraId = new mongoose.Types.ObjectId(bodyCompleto.obraId);
+    }
+    const codigoExistente = await Ambiente.exists(duplicateQuery);
+    if (codigoExistente) {
+      return NextResponse.json(
+        { message: "Já existe um ambiente com essa etiqueta nesta obra." },
+        { status: 409 }
+      );
+    }
+
+    const statusAnterior = (atualObj.status ?? "medicao_pendente") as AmbienteStatus;
+    const gerentePodeEnviar =
+      user.role === "gerente" &&
+      shouldAutoEnviarParaProducao(bodyCompleto) &&
+      (statusAnterior === "medicao_pendente" || statusAnterior === "aguardando_validacao");
+
+    let novoStatus = (patchData.status ?? statusAnterior) as AmbienteStatus;
+    if (
+      gerentePodeEnviar &&
+      (!patchData.status || patchData.status === "aguardando_validacao")
+    ) {
+      novoStatus = "producao_calha";
+    }
+
+    // ✅ VALIDATE STATUS TRANSITION
+    if (patchData.status && patchData.status !== statusAnterior) {
+      const validation = validateStatusTransition(
+        statusAnterior as ValidatedStatus,
+        patchData.status as ValidatedStatus,
+        user.role
+      );
+
+      if (!validation.valid) {
+        console.log("❌ [PATCH] Transição de status inválida:", statusAnterior, "→", patchData.status);
+        return NextResponse.json(
+          { message: validation.message || "Transição de status inválida" },
+          { status: 400 }
+        );
+      }
+
+      console.log("✅ [PATCH] Transição de status válida:", statusAnterior, "→", patchData.status);
+    }
+
+    bodyCompleto.status = novoStatus;
+
+    const statusAlterado = novoStatus !== statusAnterior;
+    const now = new Date();
+
+    let workflowData = normalizeWorkflow(atual.workflow as WorkflowState | undefined);
+    if (statusAlterado) {
+      workflowData = updateWorkflowForTransition(workflowData, statusAnterior, novoStatus, now);
+    }
+
+    const updateDoc: Record<string, unknown> = {
+      ...patchData,
+      status: novoStatus,
+      calculado,
+      updatedBy: user._id,
+    };
+    if (statusAlterado) {
+      updateDoc.workflow = workflowData;
+    }
+
+    const updateQuery: Record<string, unknown> = {
+      $set: updateDoc,
+    };
+
+    if (statusAlterado) {
+      updateQuery.$push = {
+        logs: {
+          status: novoStatus,
+          createdAt: now,
+          userId: user._id,
+          userNome: user.nome,
+        },
+      };
+    }
+
     const atualizado = await Ambiente.findByIdAndUpdate(
       params.id,
+      updateQuery,
       {
-        ...patchData,
-        calculado,
-        updatedBy: user._id,
-      },
-      { new: true }
+        new: true,
+      }
     );
 
     console.log("✅ [PATCH] Ambiente atualizado com sucesso");
+
+    if (statusAlterado && atualizado) {
+      await dispatchNotificationsForStatus(atualizado, novoStatus);
+    }
+
     return NextResponse.json(atualizado);
   } catch (error) {
     console.error("❌ [PATCH] Erro:", error);

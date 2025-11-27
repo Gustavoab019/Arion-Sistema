@@ -23,10 +23,30 @@ type VariaveisRegrasInput = {
 
 type VariaveisInput = {
   calha?: string;
+  tipoMontagem?:
+    | "simples"
+    | "dupla_paralela"
+    | "dupla_cruzada"
+    | "tripla"
+    | "painel_fixo_movel"
+    | "sistema_quadruplo"
+    | "motorizada_ondas"
+    | "sistema_misto";
   tecidoPrincipal?: string;
   tecidoSecundario?: string;
   regras?: VariaveisRegrasInput;
 };
+
+type AmbienteStatus =
+  | "medicao_pendente"
+  | "aguardando_validacao"
+  | "em_producao"
+  | "producao_calha"
+  | "producao_cortina"
+  | "estoque_deposito"
+  | "em_transito"
+  | "aguardando_instalacao"
+  | "instalado";
 
 type AmbienteInput = {
   obraId?: string;
@@ -38,7 +58,31 @@ type AmbienteInput = {
   medidas?: MedidasInput;
   variaveis?: VariaveisInput;
   observacoes?: string;
-  status?: "pendente" | "revisar" | "completo";
+  status?: AmbienteStatus;
+  validadoPor?: string;
+  producaoCortinaResponsavel?: string;
+  producaoCalhaResponsavel?: string;
+  instaladorResponsavel?: string;
+  depositoPalete?: string;
+  depositoLocal?: string;
+  depositoRecebidoPor?: string;
+  depositoRecebidoEm?: Date | string;
+  expedicaoRomaneio?: string;
+  expedicaoRetiradoPor?: string;
+  expedicaoRetiradoEm?: Date | string;
+};
+
+type WorkflowState = {
+  validadoEm?: Date;
+  producaoCalhaInicio?: Date;
+  producaoCalhaFim?: Date;
+  producaoCortinaInicio?: Date;
+  producaoCortinaFim?: Date;
+  depositoEntrada?: Date;
+  depositoSaida?: Date;
+  expedicaoSaida?: Date;
+  instalacaoInicio?: Date;
+  instalacaoFim?: Date;
 };
 
 // helper que monta o campo calculado
@@ -68,6 +112,86 @@ function montarCalculado(data: AmbienteInput) {
     alturaBlackout,
   };
 }
+
+function updateWorkflowForTransition(
+  workflow: WorkflowState | undefined,
+  previousStatus: AmbienteStatus | null,
+  nextStatus: AmbienteStatus,
+  timestamp: Date
+) {
+  const nextWorkflow: WorkflowState = { ...(workflow ?? {}) };
+  const ensure = (key: keyof WorkflowState) => {
+    if (!nextWorkflow[key]) {
+      nextWorkflow[key] = timestamp;
+    }
+  };
+
+  if (previousStatus === "producao_calha" && nextStatus !== "producao_calha") {
+    if (!nextWorkflow.producaoCalhaFim) {
+      nextWorkflow.producaoCalhaFim = timestamp;
+    }
+  }
+  if (previousStatus === "producao_cortina" && nextStatus !== "producao_cortina") {
+    if (!nextWorkflow.producaoCortinaFim) {
+      nextWorkflow.producaoCortinaFim = timestamp;
+    }
+  }
+
+  switch (nextStatus) {
+    case "aguardando_validacao":
+      ensure("validadoEm");
+      break;
+    case "em_producao":
+    case "producao_calha":
+      ensure("producaoCalhaInicio");
+      break;
+    case "producao_cortina":
+      ensure("producaoCortinaInicio");
+      if (!nextWorkflow.producaoCalhaFim) {
+        nextWorkflow.producaoCalhaFim = timestamp;
+      }
+      break;
+    case "estoque_deposito":
+      ensure("depositoEntrada");
+      if (!nextWorkflow.producaoCalhaFim) {
+        nextWorkflow.producaoCalhaFim = timestamp;
+      }
+      if (!nextWorkflow.producaoCortinaFim) {
+        nextWorkflow.producaoCortinaFim = timestamp;
+      }
+      break;
+    case "em_transito":
+      ensure("depositoSaida");
+      ensure("expedicaoSaida");
+      if (!nextWorkflow.depositoEntrada) {
+        nextWorkflow.depositoEntrada = timestamp;
+      }
+      break;
+    case "aguardando_instalacao":
+      ensure("instalacaoInicio");
+      if (!nextWorkflow.depositoSaida) {
+        nextWorkflow.depositoSaida = timestamp;
+      }
+      if (!nextWorkflow.expedicaoSaida) {
+        nextWorkflow.expedicaoSaida = timestamp;
+      }
+      if (!nextWorkflow.producaoCalhaFim) {
+        nextWorkflow.producaoCalhaFim = timestamp;
+      }
+      if (!nextWorkflow.producaoCortinaFim) {
+        nextWorkflow.producaoCortinaFim = timestamp;
+      }
+      break;
+    case "instalado":
+      nextWorkflow.instalacaoFim = timestamp;
+      break;
+    default:
+      break;
+  }
+
+  return nextWorkflow;
+}
+
 
 export async function GET(req: Request) {
   const user = await getCurrentUser(req);
@@ -151,7 +275,9 @@ export async function POST(req: Request) {
     }
   }
 
-  const { prefixo, quarto } = data;
+  const { prefixo, quarto, ...resto } = data;
+  const safePrefixo = prefixo ?? "AMB";
+  const safeQuarto = quarto ?? "";
 
   // se não veio sequência, calcula
   let sequencia = data.sequencia;
@@ -167,23 +293,49 @@ export async function POST(req: Request) {
   // se não veio código, monta
   let codigo = data.codigo;
   if (!codigo) {
-    // garante que não vai dar `AMBundefined-1` caso falte quarto
-    const safePrefixo = prefixo ?? "AMB";
-    const safeQuarto = quarto ?? "";
     codigo = `${safePrefixo}${safeQuarto}-${sequencia}`;
   }
 
   const calculado = montarCalculado(data);
+  const initialStatus = (resto.status as AmbienteStatus) ?? "medicao_pendente";
+  resto.status = initialStatus;
+
+  const duplicateFilter: Record<string, unknown> = { codigo };
+  if (resto.obraId) {
+    duplicateFilter.obraId = resto.obraId;
+  }
+  const codigoExistente = await Ambiente.exists(duplicateFilter);
+  if (codigoExistente) {
+    return NextResponse.json(
+      { message: "Já existe um ambiente com essa etiqueta nesta obra." },
+      { status: 409 }
+    );
+  }
+
+  const now = new Date();
+  const workflow = updateWorkflowForTransition(undefined, null, initialStatus, now);
 
   const novo = await Ambiente.create({
-    ...data,
+    ...resto,
+    prefixo: safePrefixo,
+    quarto: safeQuarto,
     sequencia,
     codigo,
     calculado,
     medidoPor: user.nome,
     medidoPorId: user._id,
+    status: initialStatus,
     createdBy: user._id,
     updatedBy: user._id,
+    workflow,
+    logs: [
+      {
+        status: initialStatus,
+        createdAt: now,
+        userId: user._id,
+        userNome: user.nome,
+      },
+    ],
   });
 
   return NextResponse.json(novo, { status: 201 });
